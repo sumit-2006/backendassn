@@ -37,6 +37,24 @@ public class MainVerticle extends AbstractVerticle {
 
         // TODO Phase-2: Auth routes
         // AuthRoutes.register(router, services...);
+        String jwtSecret = "role-learning-secret";
+        long expiryMs = 86400000L;
+
+        var userRepo = new org.example.repository.UserRepository();
+        var tokenRepo = new org.example.repository.TokenRepository();
+
+        var authService = new org.example.service.AuthService(userRepo, jwtSecret, expiryMs);
+        var authHandler = new org.example.handlers.AuthHandler(authService, tokenRepo, jwtSecret);
+
+        org.example.routes.AuthRoutes.register(router, authHandler);
+
+// ✅ Test protected endpoint
+        var jwtMiddleware = new org.example.middleware.JwtAuthMiddleware(jwtSecret, tokenRepo);
+
+        router.get("/admin/test")
+                .handler(jwtMiddleware::handle)
+                .handler(org.example.middleware.RoleGuard.only("ADMIN")::handle)
+                .handler(ctx -> ctx.response().end("✅ ADMIN route working"));
 
         vertx.createHttpServer()
                 .requestHandler(router)
