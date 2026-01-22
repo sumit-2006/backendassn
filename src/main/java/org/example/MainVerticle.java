@@ -3,45 +3,22 @@ package org.example;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
-
 import java.io.InputStream;
 import java.util.Properties;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule; // ✅ Import this
+import io.vertx.core.json.jackson.DatabindCodec; // ✅ Import this
+import io.vertx.ext.web.handler.StaticHandler; // ✅ Import this
 
 public class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-
+        DatabindCodec.mapper().registerModule(new JavaTimeModule());
         Router router = Router.router(vertx);
-
-        // ✅ BodyHandler required for JSON bodies
         router.route().handler(BodyHandler.create());
+        router.route("/uploads/*").handler(StaticHandler.create("file-uploads"));
 
-        // ✅ Health check
-        router.get("/").handler(ctx -> {
-            ctx.response().end("✅ Role Based Learning Platform Backend Running");
-        });
-        router.get("/health/db").handler(ctx -> {
-            try {
-                var db = org.example.config.DbConfig.getDatabase();
-                db.sqlQuery("select 1").findOne();
-
-                ctx.response()
-                        .putHeader("content-type", "application/json")
-                        .end(new io.vertx.core.json.JsonObject()
-                                .put("status", "UP")
-                                .put("db", "CONNECTED")
-                                .encodePrettily());
-
-            } catch (Exception e) {
-                ctx.response().setStatusCode(500).end("❌ DB NOT CONNECTED: " + e.getMessage());
-            }
-        });
-
-        // TODO Phase-2: Auth routes
-        // AuthRoutes.register(router, services...);
-
-        // MainVerticle.java
+        // 1. Load Configuration
         Properties props = new Properties();
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("application.properties")) {
             if (is == null) throw new RuntimeException("application.properties not found");
@@ -51,44 +28,37 @@ public class MainVerticle extends AbstractVerticle {
             return;
         }
 
-        String jwtSecret = props.getProperty("jwt.secret"); // Requirement: JWT from config [cite: 23]
+        String jwtSecret = props.getProperty("jwt.secret");
         long expiryMs = Long.parseLong(props.getProperty("jwt.expiryMs"));
 
-
+        // 2. Initialize Repositories [cite: 188]
         var userRepo = new org.example.repository.UserRepository();
         var tokenRepo = new org.example.repository.TokenRepository();
-
-        var authService = new org.example.service.AuthService(userRepo, jwtSecret, expiryMs);
-        var authHandler = new org.example.handlers.AuthHandler(authService, tokenRepo, jwtSecret);
-
-        org.example.routes.AuthRoutes.register(router, authHandler);
-
-// ✅ Test protected endpoint
-        var jwtMiddleware = new org.example.middleware.JwtAuthMiddleware(jwtSecret, tokenRepo);
-        // Inside MainVerticle.java start()
-        var adminService = new org.example.service.AdminService(userRepo);
-        var adminHandler = new org.example.handlers.AdminHandler(adminService);
-        // Inside MainVerticle.start()
-
         var kycRepo = new org.example.repository.KycRepository();
+
+        // 3. Initialize Services [cite: 187]
+        var authService = new org.example.service.AuthService(userRepo, jwtSecret, expiryMs);
+        var adminService = new org.example.service.AdminService(userRepo);
         var kycService = new org.example.service.KycService(kycRepo);
 
-// Pass both kycService and userRepo to the handler
+        // 4. Initialize Handlers [cite: 186]
+        var authHandler = new org.example.handlers.AuthHandler(authService, tokenRepo, jwtSecret);
+        var adminHandler = new org.example.handlers.AdminHandler(adminService);
         var kycHandler = new org.example.handlers.KycHandler(kycService, userRepo);
-// Register Admin Routes
+
+        // 5. Initialize Middleware [cite: 25, 26]
+        var jwtMiddleware = new org.example.middleware.JwtAuthMiddleware(jwtSecret, tokenRepo);
+
+        // 6. Register Routes [cite: 190]
+        org.example.routes.AuthRoutes.register(router, authHandler);
         org.example.routes.AdminRoutes.register(router, adminHandler, jwtMiddleware);
+        org.example.routes.KycRoutes.register(router, kycHandler, jwtMiddleware);
 
-        router.get("/admin/test")
-                .handler(jwtMiddleware::handle)
-                .handler(org.example.middleware.RoleGuard.only("ADMIN")::handle)
-                .handler(ctx -> ctx.response().end("✅ ADMIN route working"));
-
+        // 7. Start Server [cite: 150]
         vertx.createHttpServer()
                 .requestHandler(router)
                 .listen(8080)
-                .onSuccess(server ->
-                        System.out.println("✅ HTTP Server started on port " + server.actualPort()))
-                .onFailure(err ->
-                        System.out.println("❌ Failed to start server: " + err.getMessage()));
+                .onSuccess(server -> System.out.println("✅ HTTP Server started on port " + server.actualPort()))
+                .onFailure(err -> System.out.println("❌ Failed to start server: " + err.getMessage()));
     }
 }

@@ -11,5 +11,9 @@ public class AdminRoutes {
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::onboard);
+        router.get("/admin/users")
+                .handler(auth::handle)
+                .handler(RoleGuard.only("ADMIN")::handle)
+                .handler(handler::listUsers);
     }
 }

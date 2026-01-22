@@ -1,5 +1,6 @@
 package org.example.service;
 
+import io.ebean.PagedList;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import org.example.entity.KycRecord;
@@ -43,6 +44,19 @@ public class KycService {
             KycRecord record = kycRepo.findByUserId(userId);
             if (record == null) throw new RuntimeException("No KYC record found");
             return record;
+        });
+    }
+    public Single<PagedList<KycRecord>> getPendingReviewsRx(int page, int size) {
+        return Single.fromCallable(() -> kycRepo.findPending(page, size));
+    }
+    public Completable reviewKycRx(Long kycId, KycStatus status, String remarks) {
+        return Completable.fromAction(() -> {
+            KycRecord record = kycRepo.findById(kycId);
+            if (record == null) throw new RuntimeException("KYC Record not found");
+
+            record.setStatus(status);
+            record.setAdminRemarks(remarks);
+            kycRepo.save(record);
         });
     }
 }

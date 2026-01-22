@@ -12,13 +12,17 @@ public class AdminService {
         this.userRepo = userRepo;
     }
 
-    // This method resolves the "Cannot resolve method onboardUserRx" error
+    // ✅ Add this getter so AdminHandler can access findPaged()
+    public UserRepository getUserRepo() {
+        return userRepo;
+    }
+
     public Completable onboardUserRx(User user, String initialPassword) {
         return Completable.fromAction(() -> {
             if (userRepo.findByEmail(user.getEmail()) != null) {
-                throw new RuntimeException("Email already exists"); // Required validation [cite: 59]
+                throw new RuntimeException("Email already exists");
             }
-            user.setPasswordHash(PasswordUtil.hash(initialPassword)); // Required hashing [cite: 221]
+            user.setPasswordHash(PasswordUtil.hash(initialPassword));
             userRepo.save(user);
         });
     }

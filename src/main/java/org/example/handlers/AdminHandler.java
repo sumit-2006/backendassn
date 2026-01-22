@@ -30,4 +30,28 @@ public class AdminHandler {
                         err -> ctx.response().setStatusCode(400).end(err.getMessage())
                 );
     }
+
+    public void listUsers(RoutingContext ctx) {
+        try {
+            int page = Integer.parseInt(ctx.request().getParam("page", "0"));
+            int size = Integer.parseInt(ctx.request().getParam("size", "10"));
+            String roleStr = ctx.request().getParam("role");
+            org.example.entity.enums.Role role = (roleStr != null) ? org.example.entity.enums.Role.valueOf(roleStr) : null;
+
+            ctx.vertx().executeBlocking(() -> {
+                // Use the repository method you already wrote
+                return adminService.getUserRepo().findPaged(page, size, role);
+            }).onComplete(res -> {
+                if (res.succeeded()) {
+                    ctx.response()
+                            .putHeader("content-type", "application/json")
+                            .end(io.vertx.core.json.JsonObject.mapFrom(res.result()).encodePrettily());
+                } else {
+                    ctx.response().setStatusCode(500).end(res.cause().getMessage());
+                }
+            });
+        } catch (Exception e) {
+            ctx.response().setStatusCode(400).end("Invalid parameters");
+        }
+    }
 }
