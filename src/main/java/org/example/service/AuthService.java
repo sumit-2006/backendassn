@@ -6,6 +6,9 @@ import org.example.repository.UserRepository;
 import org.example.utils.JwtUtil;
 import org.example.utils.PasswordUtil;
 
+// src/main/java/org/example/service/AuthService.java
+import io.reactivex.rxjava3.core.Single;
+
 public class AuthService {
 
     private final UserRepository userRepo;
@@ -29,4 +32,17 @@ public class AuthService {
 
         return JwtUtil.generate(user, secret, expiryMs);
     }
+
+
+    public Single<String> loginRx(String email, String password) {
+        return Single.fromCallable(() -> {
+            User user = userRepo.findByEmail(email);
+            if (user == null || user.getStatus() != UserStatus.ACTIVE ||
+                    !PasswordUtil.verify(password, user.getPasswordHash())) {
+                throw new RuntimeException("Invalid credentials");
+            }
+            return JwtUtil.generate(user, secret, expiryMs);
+        });
+    }
+
 }

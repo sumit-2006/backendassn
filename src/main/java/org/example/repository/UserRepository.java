@@ -12,7 +12,7 @@ public class UserRepository {
         return db.find(User.class)
                 .where()
                 .eq("email", email)
-                .eq("isDeleted", false)
+                .eq("isDeleted", false) // Requirement: Soft delete check
                 .findOne();
     }
 

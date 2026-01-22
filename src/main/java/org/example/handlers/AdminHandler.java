@@ -4,6 +4,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.example.entity.User;
 import org.example.service.AdminService;
+import org.example.dto.OnboardRequest;
 
 public class AdminHandler {
     private final AdminService adminService;
@@ -14,28 +15,20 @@ public class AdminHandler {
 
     public void onboard(RoutingContext ctx) {
         JsonObject body = ctx.body().asJsonObject();
+        // Use a DTO to handle 'initialPassword' which isn't in the User entity [cite: 49, 54]
+        OnboardRequest req = body.mapTo(OnboardRequest.class);
 
-        // Map to DTO instead of Entity
-        org.example.dto.OnboardRequest req = body.mapTo(org.example.dto.OnboardRequest.class);
-
-        // Manually build the User entity
         User newUser = new User();
         newUser.setFullName(req.fullName);
         newUser.setEmail(req.email);
         newUser.setMobileNumber(req.mobileNumber);
         newUser.setRole(req.role);
 
-        ctx.vertx().executeBlocking(() -> {
-            // Pass the raw password from the DTO separately
-            adminService.onboardUser(newUser, req.initialPassword);
-            return null;
-        }).onComplete(res -> {
-            if (res.succeeded()) {
-                ctx.response().setStatusCode(201).end(new JsonObject()
-                        .put("message", "User onboarded successfully").encode());
-            } else {
-                ctx.response().setStatusCode(400).end(res.cause().getMessage());
-            }
-        });
+        adminService.onboardUserRx(newUser, req.initialPassword)
+                .subscribe(
+                        () -> ctx.response().setStatusCode(201).end(new JsonObject()
+                                .put("message", "User onboarded successfully").encode()),
+                        err -> ctx.response().setStatusCode(400).end(err.getMessage())
+                );
     }
 }

@@ -1,5 +1,4 @@
 package org.example.dto;
-
 import org.example.entity.enums.Role;
 
 public class OnboardRequest {
@@ -7,5 +6,5 @@ public class OnboardRequest {
     public String email;
     public String mobileNumber;
     public Role role;
-    public String initialPassword;
+    public String initialPassword; // Field from doc [cite: 54]
 }

@@ -4,6 +4,9 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 
+import java.io.InputStream;
+import java.util.Properties;
+
 public class MainVerticle extends AbstractVerticle {
 
     @Override
@@ -37,8 +40,15 @@ public class MainVerticle extends AbstractVerticle {
 
         // TODO Phase-2: Auth routes
         // AuthRoutes.register(router, services...);
-        String jwtSecret = "role-learning-secret-role-learning-secret-12345";
-        long expiryMs = 86400000L;
+
+        // MainVerticle.java
+        Properties props = new Properties();
+        InputStream is = getClass().getClassLoader().getResourceAsStream("application.properties");
+        props.load(is);
+
+        String jwtSecret = props.getProperty("jwt.secret"); // Requirement: JWT from config [cite: 23]
+        long expiryMs = Long.parseLong(props.getProperty("jwt.expiryMs"));
+
 
         var userRepo = new org.example.repository.UserRepository();
         var tokenRepo = new org.example.repository.TokenRepository();

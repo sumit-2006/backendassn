@@ -20,34 +20,16 @@ public class AuthHandler {
         this.secret = secret;
     }
 
+    // Example for AuthHandler.java
     public void login(RoutingContext ctx) {
-        try {
-            var json = ctx.body().asJsonObject();
+        LoginRequest req = ctx.body().asJsonObject().mapTo(LoginRequest.class);
 
-            if (json == null) {
-                ctx.response().setStatusCode(400).end("Request body must be JSON");
-                return;
-            }
-
-            LoginRequest req = json.mapTo(LoginRequest.class);
-
-            if (req.email == null || req.password == null) {
-                ctx.response().setStatusCode(400).end("email and password are required");
-                return;
-            }
-
-            String token = authService.login(req.email, req.password);
-
-            ctx.response()
-                    .putHeader("content-type", "application/json")
-                    .end(new JsonObject()
-                            .put("accessToken", token)
-                            .put("message", "Login successful")
-                            .encodePrettily());
-
-        } catch (Exception e) {
-            ctx.response().setStatusCode(401).end(e.getMessage());
-        }
+        authService.loginRx(req.email, req.password)
+                .subscribe(
+                        token -> ctx.response().setStatusCode(200)
+                                .end(new JsonObject().put("accessToken", token).encode()),
+                        err -> ctx.response().setStatusCode(401).end(err.getMessage())
+                );
     }
 
 
