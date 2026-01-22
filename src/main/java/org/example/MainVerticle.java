@@ -68,7 +68,13 @@ public class MainVerticle extends AbstractVerticle {
         // Inside MainVerticle.java start()
         var adminService = new org.example.service.AdminService(userRepo);
         var adminHandler = new org.example.handlers.AdminHandler(adminService);
+        // Inside MainVerticle.start()
 
+        var kycRepo = new org.example.repository.KycRepository();
+        var kycService = new org.example.service.KycService(kycRepo);
+
+// Pass both kycService and userRepo to the handler
+        var kycHandler = new org.example.handlers.KycHandler(kycService, userRepo);
 // Register Admin Routes
         org.example.routes.AdminRoutes.register(router, adminHandler, jwtMiddleware);
 

@@ -16,9 +16,9 @@ public class AdminService {
     public Completable onboardUserRx(User user, String initialPassword) {
         return Completable.fromAction(() -> {
             if (userRepo.findByEmail(user.getEmail()) != null) {
-                throw new RuntimeException("Email already exists");
+                throw new RuntimeException("Email already exists"); // Required validation [cite: 59]
             }
-            user.setPasswordHash(PasswordUtil.hash(initialPassword));
+            user.setPasswordHash(PasswordUtil.hash(initialPassword)); // Required hashing [cite: 221]
             userRepo.save(user);
         });
     }

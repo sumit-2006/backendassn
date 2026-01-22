@@ -37,5 +37,9 @@ public abstract class BaseEntity extends Model {
     public Instant getUpdatedAt() { return updatedAt; }
     public Boolean getIsDeleted() { return isDeleted; }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public void setIsDeleted(Boolean isDeleted) { this.isDeleted = isDeleted; }
 }

@@ -15,7 +15,10 @@ public class UserRepository {
                 .eq("isDeleted", false) // Requirement: Soft delete check
                 .findOne();
     }
-
+    // src/main/java/org/example/repository/UserRepository.java
+    public User getReference(Long id) {
+        return db.reference(User.class, id);
+    }
     public void save(User user) {
         db.save(user);
     }

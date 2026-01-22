@@ -15,7 +15,7 @@ public class AdminHandler {
 
     public void onboard(RoutingContext ctx) {
         JsonObject body = ctx.body().asJsonObject();
-        org.example.dto.OnboardRequest req = body.mapTo(org.example.dto.OnboardRequest.class);
+        OnboardRequest req = body.mapTo(OnboardRequest.class);
 
         User newUser = new User();
         newUser.setFullName(req.fullName);
