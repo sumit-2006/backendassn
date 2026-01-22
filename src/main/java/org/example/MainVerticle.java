@@ -43,8 +43,13 @@ public class MainVerticle extends AbstractVerticle {
 
         // MainVerticle.java
         Properties props = new Properties();
-        InputStream is = getClass().getClassLoader().getResourceAsStream("application.properties");
-        props.load(is);
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("application.properties")) {
+            if (is == null) throw new RuntimeException("application.properties not found");
+            props.load(is);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to load config: " + e.getMessage());
+            return;
+        }
 
         String jwtSecret = props.getProperty("jwt.secret"); // Requirement: JWT from config [cite: 23]
         long expiryMs = Long.parseLong(props.getProperty("jwt.expiryMs"));

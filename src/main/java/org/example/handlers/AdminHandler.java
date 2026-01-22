@@ -15,8 +15,7 @@ public class AdminHandler {
 
     public void onboard(RoutingContext ctx) {
         JsonObject body = ctx.body().asJsonObject();
-        // Use a DTO to handle 'initialPassword' which isn't in the User entity [cite: 49, 54]
-        OnboardRequest req = body.mapTo(OnboardRequest.class);
+        org.example.dto.OnboardRequest req = body.mapTo(org.example.dto.OnboardRequest.class);
 
         User newUser = new User();
         newUser.setFullName(req.fullName);
