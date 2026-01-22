@@ -50,6 +50,12 @@ public class MainVerticle extends AbstractVerticle {
 
 // ✅ Test protected endpoint
         var jwtMiddleware = new org.example.middleware.JwtAuthMiddleware(jwtSecret, tokenRepo);
+        // Inside MainVerticle.java start()
+        var adminService = new org.example.service.AdminService(userRepo);
+        var adminHandler = new org.example.handlers.AdminHandler(adminService);
+
+// Register Admin Routes
+        org.example.routes.AdminRoutes.register(router, adminHandler, jwtMiddleware);
 
         router.get("/admin/test")
                 .handler(jwtMiddleware::handle)

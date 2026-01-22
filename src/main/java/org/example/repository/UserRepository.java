@@ -19,4 +19,19 @@ public class UserRepository {
     public void save(User user) {
         db.save(user);
     }
+
+    // Add to UserRepository.java
+    public io.ebean.PagedList<User> findPaged(int page, int size, org.example.entity.enums.Role role) {
+        var query = db.find(User.class)
+                .where()
+                .eq("isDeleted", false);
+
+        if (role != null) {
+            query.eq("role", role);
+        }
+
+        return query.setFirstRow(page * size)
+                .setMaxRows(size)
+                .findPagedList();
+    }
 }
