@@ -37,7 +37,7 @@ public class MainVerticle extends AbstractVerticle {
 
         // TODO Phase-2: Auth routes
         // AuthRoutes.register(router, services...);
-        String jwtSecret = "role-learning-secret";
+        String jwtSecret = "role-learning-secret-role-learning-secret-12345";
         long expiryMs = 86400000L;
 
         var userRepo = new org.example.repository.UserRepository();
