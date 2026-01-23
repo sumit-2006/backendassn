@@ -1,10 +1,12 @@
 package org.example.entity;
 
 import io.ebean.annotation.DbDefault;
+import io.ebean.annotation.DbJson;
 import jakarta.persistence.*;
 import org.example.entity.enums.GovtIdType;
 import org.example.entity.enums.KycStatus;
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "kyc_records")
@@ -35,6 +37,33 @@ public class KycRecord extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String adminRemarks;
+    // Add these fields to your existing class
+
+    @Column(name = "ai_status")
+    private String aiStatus; // Or create an Enum if preferred
+
+    @Column(name = "ai_confidence_score")
+    private Integer aiConfidenceScore;
+
+    @Column(name = "ai_recommendation")
+    private String aiRecommendation;
+
+    @DbJson // Requires Ebean JSON support
+    @Column(name = "ai_risk_flags", columnDefinition = "json")
+    private List<String> aiRiskFlags;
+
+    // Add Getters and Setters for these new fields
+    public String getAiStatus() { return aiStatus; }
+    public void setAiStatus(String aiStatus) { this.aiStatus = aiStatus; }
+
+    public Integer getAiConfidenceScore() { return aiConfidenceScore; }
+    public void setAiConfidenceScore(Integer aiConfidenceScore) { this.aiConfidenceScore = aiConfidenceScore; }
+
+    public String getAiRecommendation() { return aiRecommendation; }
+    public void setAiRecommendation(String aiRecommendation) { this.aiRecommendation = aiRecommendation; }
+
+    public List<String> getAiRiskFlags() { return aiRiskFlags; }
+    public void setAiRiskFlags(List<String> aiRiskFlags) { this.aiRiskFlags = aiRiskFlags; }
 
     // Getters and Setters
     public User getUser() { return user; }
