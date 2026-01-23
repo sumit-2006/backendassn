@@ -4,6 +4,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.example.dto.OnboardRequest;
+import org.example.entity.enums.UserStatus;
 import org.example.service.AdminService;
 
 public class AdminHandler {
@@ -58,6 +59,9 @@ public class AdminHandler {
     }
 
     // Keep this if you have implemented Phase 5 (Bulk Import)
+
+
+    // --- NEW: ASYNC BULK IMPORT ---
     public void bulkImport(RoutingContext ctx) {
         if (ctx.fileUploads().isEmpty()) {
             ctx.response().setStatusCode(400).end("CSV file is mandatory");
@@ -65,16 +69,44 @@ public class AdminHandler {
         }
 
         String uploadedFilePath = ctx.fileUploads().get(0).uploadedFileName();
+        Long adminId = ctx.get("userId"); // From JWT
 
-        // Calling the method we just added to AdminService
-        adminService.bulkImportRx(uploadedFilePath).subscribe(
-                report -> {
-                    ctx.response()
-                            .setStatusCode(200)
-                            .putHeader("content-type", "application/json")
-                            .end(report.encodePrettily());
-                },
-                err -> ctx.response().setStatusCode(500).end("Import Failed: " + err.getMessage())
+        adminService.initiateBulkImport(adminId, uploadedFilePath).subscribe(
+                json -> ctx.response().setStatusCode(202).end(json.encode()), // 202 Accepted
+                err -> ctx.response().setStatusCode(500).end(new JsonObject().put("error", err.getMessage()).encode())
         );
+    }
+
+    public void getBulkStatus(RoutingContext ctx) {
+        try {
+            Long uploadId = Long.parseLong(ctx.pathParam("id"));
+            // This needs to be blocking as Ebean is blocking
+            ctx.vertx().executeBlocking(() -> adminService.getBulkUploadRepo().findById(uploadId))
+                    .onComplete(res -> {
+                        if (res.succeeded() && res.result() != null) {
+                            ctx.response().putHeader("content-type", "application/json").end(Json.encodePrettily(res.result()));
+                        } else {
+                            ctx.response().setStatusCode(404).end("Upload not found");
+                        }
+                    });
+        } catch (Exception e) {
+            ctx.response().setStatusCode(400).end("Invalid ID");
+        }
+    }
+
+    public void changeUserStatus(RoutingContext ctx) {
+        try {
+            Long userId = Long.parseLong(ctx.pathParam("userId"));
+            JsonObject body = ctx.body().asJsonObject();
+            String statusStr = body.getString("status");
+            UserStatus status = UserStatus.valueOf(statusStr);
+
+            adminService.updateUserStatusRx(userId, status).subscribe(
+                    json -> ctx.response().setStatusCode(200).end(json.encode()),
+                    err -> ctx.response().setStatusCode(400).end(new JsonObject().put("error", err.getMessage()).encode())
+            );
+        } catch (Exception e) {
+            ctx.response().setStatusCode(400).end("Invalid Request: Send { \"status\": \"ACTIVE\"/\"INACTIVE\" }");
+        }
     }
 }
