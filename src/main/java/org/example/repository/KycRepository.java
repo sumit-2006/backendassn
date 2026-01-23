@@ -30,6 +30,8 @@ public class KycRepository {
                 .setMaxRows(size)
                 .findPagedList();
     }
+
+
     public KycRecord findById(Long id) {
         return db.find(KycRecord.class, id);
     }
