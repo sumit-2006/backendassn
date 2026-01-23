@@ -50,7 +50,9 @@ public class KycHandler {
             // New Readable Filename: user_5_kyc.png
             String newFileName = "user_" + currentUserId + "_kyc" + extension;
             String newPath = "file-uploads/" + newFileName;
-
+            if (ctx.vertx().fileSystem().existsBlocking(newPath)) {
+                ctx.vertx().fileSystem().deleteBlocking(newPath);
+            }
             // Move & Rename the file
             ctx.vertx().fileSystem().moveBlocking(file.uploadedFileName(), newPath);
             // --- FILE RENAMING LOGIC END ---

@@ -37,5 +37,11 @@ public class AdminRoutes {
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::getBulkStatus);
+
+        // ✅ NEW: Soft Delete User
+        router.delete("/admin/users/:userId")
+                .handler(auth::handle)
+                .handler(RoleGuard.only("ADMIN")::handle)
+                .handler(handler::deleteUser);
     }
 }

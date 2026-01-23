@@ -109,4 +109,15 @@ public class AdminHandler {
             ctx.response().setStatusCode(400).end("Invalid Request: Send { \"status\": \"ACTIVE\"/\"INACTIVE\" }");
         }
     }
+    public void deleteUser(RoutingContext ctx) {
+        try {
+            Long userId = Long.parseLong(ctx.pathParam("userId"));
+            adminService.deleteUserRx(userId).subscribe(
+                    json -> ctx.response().setStatusCode(200).end(json.encode()),
+                    err -> ctx.response().setStatusCode(400).end(new JsonObject().put("error", err.getMessage()).encode())
+            );
+        } catch (Exception e) {
+            ctx.response().setStatusCode(400).end("Invalid User ID");
+        }
+    }
 }

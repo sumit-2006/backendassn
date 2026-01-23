@@ -331,4 +331,20 @@ public class AdminService {
     public BulkUploadRepository getBulkUploadRepo() {
         return bulkUploadRepo;
     }
+    // Soft Delete User (Mark as deleted)
+    public Single<JsonObject> deleteUserRx(Long userId) {
+        return Single.fromCallable(() -> {
+            User user = userRepo.findById(userId);
+            if (user == null) throw new RuntimeException("User not found");
+
+            // Prevent deleting yourself (Admin)
+            if (user.getRole() == Role.ADMIN) throw new RuntimeException("Cannot delete Admin");
+
+            user.setIsDeleted(true); // Matches BaseEntity.isDeleted
+            user.setStatus(UserStatus.INACTIVE); // Also deactivate them
+            userRepo.save(user);
+
+            return new JsonObject().put("message", "User deleted successfully");
+        });
+    }
 }
