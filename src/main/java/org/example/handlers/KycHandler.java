@@ -20,7 +20,7 @@ public class KycHandler {
         this.userRepo = userRepo;
     }
 
-    // ✅ FIX 1: Robust Submit Method (With Trimming + File Extension)
+    // ✅ ROBUST SUBMIT: Renames file to "user_101_kyc.png"
     public void submit(RoutingContext ctx) {
         try {
             // 1. Validation: Verify file upload
@@ -37,23 +37,28 @@ public class KycHandler {
                 return;
             }
 
-            // --- CRITICAL FIX: Append Extension to Filename ---
+            // --- FILE RENAMING LOGIC START ---
+            Long currentUserId = ctx.get("userId"); // Get the User ID from Token
+
             String originalName = file.fileName();
             String extension = "";
             int i = originalName.lastIndexOf('.');
             if (i > 0) {
-                extension = originalName.substring(i); // Get ".png" or ".pdf"
+                extension = originalName.substring(i); // e.g. ".png"
             }
 
-            String uploadedPath = file.uploadedFileName();
-            String newPath = uploadedPath + extension; // e.g. "file-uploads/uuid.png"
+            // New Readable Filename: user_5_kyc.png
+            String newFileName = "user_" + currentUserId + "_kyc" + extension;
+            String newPath = "file-uploads/" + newFileName;
 
-            // Rename file on disk so browser can open it
-            ctx.vertx().fileSystem().moveBlocking(uploadedPath, newPath);
+            // Move & Rename the file
+            ctx.vertx().fileSystem().moveBlocking(file.uploadedFileName(), newPath);
+            // --- FILE RENAMING LOGIC END ---
 
-            // --- CRITICAL FIX: Trim Inputs to prevent parsing errors ---
+            // 3. Create Record
             KycRecord record = new KycRecord();
 
+            // Input Cleaning (Trimming)
             String address = ctx.request().getFormAttribute("address");
             if (address == null || address.isBlank()) throw new RuntimeException("Address is required");
             record.setAddress(address.trim());
@@ -70,11 +75,9 @@ public class KycHandler {
             if (idNumRaw == null || idNumRaw.isBlank()) throw new RuntimeException("Govt ID Number is required");
             record.setGovtIdNumber(idNumRaw.trim());
 
-            // Save the NEW path (with extension) to DB
-            record.setDocumentPath(new File(newPath).getName());
+            // Save the READABLE filename to DB
+            record.setDocumentPath(newFileName);
 
-            // Link User
-            Long currentUserId = ctx.get("userId");
             record.setUser(userRepo.getReference(currentUserId));
 
             // Submit
@@ -89,21 +92,12 @@ public class KycHandler {
         }
     }
 
+    // ... Keep getStatus, getPendingReviews, reviewKyc exactly as they were ...
     public void getStatus(RoutingContext ctx) {
         Long userId = ctx.get("userId");
-
         kycService.getStatusRx(userId).subscribe(
-                record -> {
-                    ctx.response()
-                            .putHeader("content-type", "application/json")
-                            .end(JsonObject.mapFrom(record).encode());
-                },
-                err -> {
-                    ctx.response()
-                            .setStatusCode(404)
-                            .putHeader("content-type", "application/json")
-                            .end(new JsonObject().put("message", "No KYC submitted yet").encode());
-                }
+                record -> ctx.response().putHeader("content-type", "application/json").end(JsonObject.mapFrom(record).encode()),
+                err -> ctx.response().setStatusCode(404).putHeader("content-type", "application/json").end(new JsonObject().put("message", "No KYC submitted yet").encode())
         );
     }
 
@@ -111,18 +105,12 @@ public class KycHandler {
         try {
             int page = Integer.parseInt(ctx.request().getParam("page", "0"));
             int size = Integer.parseInt(ctx.request().getParam("size", "10"));
-
             kycService.getPendingReviewsRx(page, size).subscribe(
-                    pagedList -> {
-                        ctx.response()
-                                .putHeader("content-type", "application/json")
-                                // ✅ FIX: Use Json.encodePrettily for Lists
-                                .end(Json.encodePrettily(pagedList.getList()));
-                    },
+                    pagedList -> ctx.response().putHeader("content-type", "application/json").end(Json.encodePrettily(pagedList.getList())),
                     err -> ctx.response().setStatusCode(500).end(new JsonObject().put("error", err.getMessage()).encode())
             );
         } catch (NumberFormatException e) {
-            ctx.response().setStatusCode(400).end("Invalid page or size parameters");
+            ctx.response().setStatusCode(400).end("Invalid parameters");
         }
     }
 
@@ -130,7 +118,6 @@ public class KycHandler {
         try {
             Long kycId = Long.parseLong(ctx.pathParam("id"));
             JsonObject body = ctx.body().asJsonObject();
-
             String statusStr = body.getString("status");
             String remarks = body.getString("adminRemarks");
 
@@ -139,15 +126,12 @@ public class KycHandler {
                 return;
             }
 
-            KycStatus status = KycStatus.valueOf(statusStr);
-
-            kycService.reviewKycRx(kycId, status, remarks).subscribe(
+            kycService.reviewKycRx(kycId, KycStatus.valueOf(statusStr), remarks).subscribe(
                     () -> ctx.response().setStatusCode(200).end(new JsonObject().put("message", "KYC Updated").encode()),
                     err -> ctx.response().setStatusCode(400).end(new JsonObject().put("error", err.getMessage()).encode())
             );
-
         } catch (Exception e) {
-            ctx.response().setStatusCode(400).end("Invalid Request: " + e.getMessage());
+            ctx.response().setStatusCode(400).end("Invalid Request");
         }
     }
 }

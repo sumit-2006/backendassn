@@ -1,10 +1,10 @@
 package org.example.handlers;
 
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import org.example.entity.User;
-import org.example.service.AdminService;
 import org.example.dto.OnboardRequest;
+import org.example.service.AdminService;
 
 public class AdminHandler {
     private final AdminService adminService;
@@ -14,21 +14,23 @@ public class AdminHandler {
     }
 
     public void onboard(RoutingContext ctx) {
-        JsonObject body = ctx.body().asJsonObject();
-        OnboardRequest req = body.mapTo(OnboardRequest.class);
+        try {
+            JsonObject body = ctx.body().asJsonObject();
+            // Map JSON to DTO
+            OnboardRequest req = body.mapTo(OnboardRequest.class);
 
-        User newUser = new User();
-        newUser.setFullName(req.fullName);
-        newUser.setEmail(req.email);
-        newUser.setMobileNumber(req.mobileNumber);
-        newUser.setRole(req.role);
-
-        adminService.onboardUserRx(newUser, req.initialPassword)
-                .subscribe(
-                        () -> ctx.response().setStatusCode(201).end(new JsonObject()
-                                .put("message", "User onboarded successfully").encode()),
-                        err -> ctx.response().setStatusCode(400).end(err.getMessage())
-                );
+            // ✅ FIX: Pass the 'req' object directly to Service.
+            // The Service now handles creating the User and the Profile (Student/Teacher).
+            adminService.onboardUserRx(req)
+                    .subscribe(
+                            () -> ctx.response().setStatusCode(201).end(new JsonObject()
+                                    .put("message", "User onboarded successfully").encode()),
+                            err -> ctx.response().setStatusCode(400).end(new JsonObject()
+                                    .put("error", err.getMessage()).encode())
+                    );
+        } catch (Exception e) {
+            ctx.response().setStatusCode(400).end("Invalid Request: " + e.getMessage());
+        }
     }
 
     public void listUsers(RoutingContext ctx) {
@@ -39,13 +41,13 @@ public class AdminHandler {
             org.example.entity.enums.Role role = (roleStr != null) ? org.example.entity.enums.Role.valueOf(roleStr) : null;
 
             ctx.vertx().executeBlocking(() -> {
-                // Use the repository method you already wrote
+                // Use the repository method exposed via Service
                 return adminService.getUserRepo().findPaged(page, size, role);
             }).onComplete(res -> {
                 if (res.succeeded()) {
                     ctx.response()
                             .putHeader("content-type", "application/json")
-                            .end(io.vertx.core.json.JsonObject.mapFrom(res.result()).encodePrettily());
+                            .end(Json.encodePrettily(res.result())); // Use Json.encodePrettily for cleaner output
                 } else {
                     ctx.response().setStatusCode(500).end(res.cause().getMessage());
                 }
@@ -53,5 +55,26 @@ public class AdminHandler {
         } catch (Exception e) {
             ctx.response().setStatusCode(400).end("Invalid parameters");
         }
+    }
+
+    // Keep this if you have implemented Phase 5 (Bulk Import)
+    public void bulkImport(RoutingContext ctx) {
+        if (ctx.fileUploads().isEmpty()) {
+            ctx.response().setStatusCode(400).end("CSV file is mandatory");
+            return;
+        }
+
+        String uploadedFilePath = ctx.fileUploads().get(0).uploadedFileName();
+
+        // Calling the method we just added to AdminService
+        adminService.bulkImportRx(uploadedFilePath).subscribe(
+                report -> {
+                    ctx.response()
+                            .setStatusCode(200)
+                            .putHeader("content-type", "application/json")
+                            .end(report.encodePrettily());
+                },
+                err -> ctx.response().setStatusCode(500).end("Import Failed: " + err.getMessage())
+        );
     }
 }

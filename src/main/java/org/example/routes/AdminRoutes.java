@@ -15,5 +15,10 @@ public class AdminRoutes {
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::listUsers);
+        // Inside register() method
+        router.post("/admin/users/bulk")
+                .handler(auth::handle)
+                .handler(RoleGuard.only("ADMIN")::handle)
+                .handler(handler::bulkImport);
     }
 }
