@@ -64,4 +64,19 @@ public class AuthHandler {
         }
     }
 
+    public void updateProfile(RoutingContext ctx) {
+        Long userId = ctx.get("userId");
+
+        try {
+            org.example.dto.UpdateProfileRequest req = ctx.body().asJsonObject().mapTo(org.example.dto.UpdateProfileRequest.class);
+
+            authService.updateProfileRx(userId, req).subscribe(
+                    json -> ctx.response().setStatusCode(200).end(json.encode()),
+                    err -> ctx.response().setStatusCode(400).end(new JsonObject().put("error", err.getMessage()).encode())
+            );
+        } catch (Exception e) {
+            ctx.response().setStatusCode(400).end("Invalid Request JSON");
+        }
+    }
+
 }

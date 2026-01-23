@@ -9,6 +9,8 @@ public class OnboardRequest {
     private String mobileNumber;
     private Role role;
     private String initialPassword; // Field from doc
+    private Integer experienceYears; // ✅ Added
+    private String courseEnrolled; // ✅ Added
 
     // ✅ NEW: Student Specific Fields
     private String enrollmentNumber;
@@ -56,4 +58,11 @@ public class OnboardRequest {
 
     public Double getSalary() { return salary; }
     public void setSalary(Double salary) { this.salary = salary; }
+
+    // ✅ New Getters/Setters
+    public String getCourseEnrolled() { return courseEnrolled; }
+    public void setCourseEnrolled(String courseEnrolled) { this.courseEnrolled = courseEnrolled; }
+
+    public Integer getExperienceYears() { return experienceYears; }
+    public void setExperienceYears(Integer experienceYears) { this.experienceYears = experienceYears; }
 }

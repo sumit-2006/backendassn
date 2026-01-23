@@ -55,6 +55,7 @@ public class AdminService {
                 sp.setEnrollmentNumber(request.getEnrollmentNumber());
                 sp.setGrade(request.getGrade());
                 sp.setParentName(request.getParentName());
+                sp.setCourseEnrolled(request.getCourseEnrolled());
                 studentRepo.save(sp);
             } else if (request.getRole() == Role.TEACHER) {
                 TeacherProfile tp = new TeacherProfile();
@@ -62,6 +63,7 @@ public class AdminService {
                 tp.setSubjectSpecialization(request.getSubjectSpecialization());
                 tp.setQualification(request.getQualification());
                 tp.setSalary(request.getSalary());
+                tp.setExperienceYears(request.getExperienceYears());
                 teacherRepo.save(tp);
             }
         });

@@ -9,12 +9,16 @@ public class TeacherProfile extends BaseEntity {
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
-
+    @Column(name = "experience_years")
+    private Integer experienceYears;
     private String subjectSpecialization;
     private String qualification;
     private Double salary;
 
     // Getters and Setters
+    // Getter and Setter
+    public Integer getExperienceYears() { return experienceYears; }
+    public void setExperienceYears(Integer experienceYears) { this.experienceYears = experienceYears; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
 

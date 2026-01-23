@@ -12,5 +12,9 @@ public class AuthRoutes {
         router.get("/auth/me")
                 .handler(authMiddleware::handle) // Require Login
                 .handler(handler::getProfile);
+        // ✅ NEW: UPDATE Profile
+        router.put("/auth/me")
+                .handler(authMiddleware::handle) // Protect
+                .handler(handler::updateProfile);
     }
 }

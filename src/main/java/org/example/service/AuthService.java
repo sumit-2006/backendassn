@@ -76,7 +76,8 @@ public class AuthService {
                     response.put("details", new JsonObject()
                             .put("grade", profile.getGrade())
                             .put("enrollmentNumber", profile.getEnrollmentNumber())
-                            .put("parentName", profile.getParentName()));
+                            .put("parentName", profile.getParentName())
+                            .put("courseEnrolled",profile.getCourseEnrolled()));
                 }
             }
             else if (user.getRole() == Role.TEACHER) {
@@ -85,12 +86,44 @@ public class AuthService {
                     response.put("details", new JsonObject()
                             .put("specialization", profile.getSubjectSpecialization())
                             .put("qualification", profile.getQualification())
-                            .put("salary", profile.getSalary()));
+                            .put("salary", profile.getSalary())
+                            .put("experienceYears", profile.getExperienceYears()));
                 }
             }
 
             return response;
         });
     }
+    // In AuthService.java
+    public Single<JsonObject> updateProfileRx(Long userId, org.example.dto.UpdateProfileRequest req) {
+        return Single.fromCallable(() -> {
+            User user = userRepo.findById(userId);
+            if (user == null) throw new RuntimeException("User not found");
 
+            // 1. Common Fields [cite: 873]
+            if (req.getFullName() != null) user.setFullName(req.getFullName());
+            if (req.getMobileNumber() != null) user.setMobileNumber(req.getMobileNumber());
+            userRepo.save(user);
+
+            // 2. Role Specific Fields
+            if (user.getRole() == Role.STUDENT) {
+                var profile = studentRepo.findByUserId(userId);
+                if (profile != null) {
+                    // ✅ Requirement 15.4: courseEnrolled
+                    if (req.getCourseEnrolled() != null) profile.setCourseEnrolled(req.getCourseEnrolled());
+                    studentRepo.save(profile);
+                }
+            }
+            else if (user.getRole() == Role.TEACHER) {
+                var profile = teacherRepo.findByUserId(userId);
+                if (profile != null) {
+                    // ✅ Requirement 15.3: qualification & experienceYears
+                    if (req.getQualification() != null) profile.setQualification(req.getQualification());
+                    if (req.getExperienceYears() != null) profile.setExperienceYears(req.getExperienceYears());
+                    teacherRepo.save(profile);
+                }
+            }
+            return new JsonObject().put("message", "Profile updated successfully");
+        });
+    }
 }
