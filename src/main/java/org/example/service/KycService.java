@@ -15,9 +15,9 @@ public class KycService {
     private final KycRepository kycRepo;
     private final AiService aiService;
 
-    public KycService(KycRepository kycRepo) {
+    public KycService(KycRepository kycRepo, AiService aiService) {
         this.kycRepo = kycRepo;
-        this.aiService = new AiService();
+        this.aiService = aiService;
     }
 
     public Completable submitKycRx(KycRecord record) {

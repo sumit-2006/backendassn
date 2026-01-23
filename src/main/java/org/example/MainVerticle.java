@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.vertx.core.json.jackson.DatabindCodec;
 import java.io.InputStream;
 import java.util.Properties;
+import io.vertx.rxjava3.core.Vertx;
 
 public class MainVerticle extends AbstractVerticle {
 
@@ -33,7 +34,8 @@ public class MainVerticle extends AbstractVerticle {
 
         String jwtSecret = props.getProperty("jwt.secret");
         long expiryMs = Long.parseLong(props.getProperty("jwt.expiryMs"));
-
+        String aiKey = props.getProperty("ai.apiKey", "mock-key"); // Default to mock if missing
+        String aiModel = props.getProperty("ai.model", "mistralai/mistral-7b-instruct:free");
         // 4. Initialize ALL Repositories
         var userRepo = new org.example.repository.UserRepository();
         var tokenRepo = new org.example.repository.TokenRepository();
@@ -48,8 +50,10 @@ public class MainVerticle extends AbstractVerticle {
 
         // ✅ FIX: Pass all 3 repositories to AdminService (Matches the new Constructor)
         var adminService = new org.example.service.AdminService(userRepo, studentRepo, teacherRepo);
+        io.vertx.rxjava3.core.Vertx rxVertx = io.vertx.rxjava3.core.Vertx.newInstance(vertx);
+        var aiService = new org.example.service.AiService(rxVertx, aiKey, aiModel);
 
-        var kycService = new org.example.service.KycService(kycRepo);
+        var kycService = new org.example.service.KycService(kycRepo,aiService);
         // 6. Initialize Handlers
         var authHandler = new org.example.handlers.AuthHandler(authService, tokenRepo, jwtSecret);
         var adminHandler = new org.example.handlers.AdminHandler(adminService);
