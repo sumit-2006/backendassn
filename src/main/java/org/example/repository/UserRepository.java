@@ -37,4 +37,7 @@ public class UserRepository {
                 .setMaxRows(size)
                 .findPagedList();
     }
+    public User findById(Long id) {
+        return db.find(User.class).where().eq("id", id).findOne();
+    }
 }

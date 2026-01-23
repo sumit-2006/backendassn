@@ -1,7 +1,11 @@
 package org.example.service;
 
+import io.vertx.core.json.JsonObject;
 import org.example.entity.User;
+import org.example.entity.enums.Role;
 import org.example.entity.enums.UserStatus;
+import org.example.repository.StudentProfileRepository;
+import org.example.repository.TeacherProfileRepository;
 import org.example.repository.UserRepository;
 import org.example.utils.JwtUtil;
 import org.example.utils.PasswordUtil;
@@ -14,12 +18,17 @@ public class AuthService {
     private final UserRepository userRepo;
     private final String secret;
     private final long expiryMs;
+    private final StudentProfileRepository studentRepo; // ✅ NEW
+    private final TeacherProfileRepository teacherRepo;
 
-    public AuthService(UserRepository userRepo, String secret, long expiryMs) {
+    public AuthService(UserRepository userRepo, String secret, long expiryMs, StudentProfileRepository studentRepo, TeacherProfileRepository teacherRepo) {
         this.userRepo = userRepo;
         this.secret = secret;
         this.expiryMs = expiryMs;
+        this.studentRepo = studentRepo;
+        this.teacherRepo = teacherRepo;
     }
+
 
     public String login(String email, String password) {
         User user = userRepo.findByEmail(email);
@@ -42,6 +51,40 @@ public class AuthService {
                 throw new RuntimeException("Invalid credentials");
             }
             return JwtUtil.generate(user, secret, expiryMs);
+        });
+    }
+
+    // ✅ THIS IS THE METHOD YOU WERE MISSING
+    public Single<JsonObject> getProfileRx(Long userId) {
+        return Single.fromCallable(() -> {
+            User user = userRepo.findById(userId);
+            if (user == null) throw new RuntimeException("User not found");
+
+            JsonObject response = new JsonObject()
+                    .put("id", user.getId())
+                    .put("fullName", user.getFullName())
+                    .put("email", user.getEmail())
+                    .put("role", user.getRole())
+                    .put("mobile", user.getMobileNumber());
+
+            if (user.getRole() == Role.STUDENT) {
+                var sp = studentRepo.findByUserId(userId);
+                if (sp != null) {
+                    response.put("details", new JsonObject()
+                            .put("enrollmentNumber", sp.getEnrollmentNumber())
+                            .put("grade", sp.getGrade())
+                            .put("parentName", sp.getParentName()));
+                }
+            } else if (user.getRole() == Role.TEACHER) {
+                var tp = teacherRepo.findByUserId(userId);
+                if (tp != null) {
+                    response.put("details", new JsonObject()
+                            .put("specialization", tp.getSubjectSpecialization())
+                            .put("qualification", tp.getQualification())
+                            .put("salary", tp.getSalary()));
+                }
+            }
+            return response;
         });
     }
 

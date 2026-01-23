@@ -44,13 +44,12 @@ public class MainVerticle extends AbstractVerticle {
         var teacherRepo = new org.example.repository.TeacherProfileRepository();
 
         // 5. Initialize Services
-        var authService = new org.example.service.AuthService(userRepo, jwtSecret, expiryMs);
+        var authService = new org.example.service.AuthService(userRepo, jwtSecret, expiryMs,studentRepo,teacherRepo);
 
         // ✅ FIX: Pass all 3 repositories to AdminService (Matches the new Constructor)
         var adminService = new org.example.service.AdminService(userRepo, studentRepo, teacherRepo);
 
         var kycService = new org.example.service.KycService(kycRepo);
-
         // 6. Initialize Handlers
         var authHandler = new org.example.handlers.AuthHandler(authService, tokenRepo, jwtSecret);
         var adminHandler = new org.example.handlers.AdminHandler(adminService);
@@ -60,7 +59,7 @@ public class MainVerticle extends AbstractVerticle {
         var jwtMiddleware = new org.example.middleware.JwtAuthMiddleware(jwtSecret, tokenRepo);
 
         // 8. Register Routes
-        org.example.routes.AuthRoutes.register(router, authHandler);
+        org.example.routes.AuthRoutes.register(router, authHandler,jwtMiddleware);
         org.example.routes.AdminRoutes.register(router, adminHandler, jwtMiddleware);
         org.example.routes.KycRoutes.register(router, kycHandler, jwtMiddleware);
 

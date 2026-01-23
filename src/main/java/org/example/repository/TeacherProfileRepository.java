@@ -10,4 +10,9 @@ public class TeacherProfileRepository {
     public void save(TeacherProfile profile) {
         db.save(profile);
     }
+    public TeacherProfile findByUserId(Long userId) {
+        return db.find(TeacherProfile.class)
+                .where().eq("user.id", userId)
+                .findOne();
+    }
 }

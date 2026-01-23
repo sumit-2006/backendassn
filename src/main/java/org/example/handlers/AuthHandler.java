@@ -32,7 +32,17 @@ public class AuthHandler {
                 );
     }
 
+    public void getProfile(io.vertx.ext.web.RoutingContext ctx) {
+        Long userId = ctx.get("userId"); // Got from JwtAuthMiddleware
 
+        authService.getProfileRx(userId).subscribe(
+                json -> ctx.response()
+                        .setStatusCode(200)
+                        .putHeader("content-type", "application/json")
+                        .end(json.encodePrettily()),
+                err -> ctx.response().setStatusCode(404).end(new JsonObject().put("error", err.getMessage()).encode())
+        );
+    }
     public void logout(RoutingContext ctx) {
         try {
             String auth = ctx.request().getHeader("Authorization");
@@ -53,4 +63,5 @@ public class AuthHandler {
             ctx.response().setStatusCode(401).end("Invalid token");
         }
     }
+
 }
