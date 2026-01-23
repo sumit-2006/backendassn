@@ -55,8 +55,10 @@ public class AuthService {
     }
 
     // ✅ THIS IS THE METHOD YOU WERE MISSING
+    // 3. The New Logic for Profile
     public Single<JsonObject> getProfileRx(Long userId) {
         return Single.fromCallable(() -> {
+            // A. Get Common Info
             User user = userRepo.findById(userId);
             if (user == null) throw new RuntimeException("User not found");
 
@@ -67,23 +69,26 @@ public class AuthService {
                     .put("role", user.getRole())
                     .put("mobile", user.getMobileNumber());
 
+            // B. Check Role & Get Specific Info
             if (user.getRole() == Role.STUDENT) {
-                var sp = studentRepo.findByUserId(userId);
-                if (sp != null) {
+                var profile = studentRepo.findByUserId(userId);
+                if (profile != null) {
                     response.put("details", new JsonObject()
-                            .put("enrollmentNumber", sp.getEnrollmentNumber())
-                            .put("grade", sp.getGrade())
-                            .put("parentName", sp.getParentName()));
-                }
-            } else if (user.getRole() == Role.TEACHER) {
-                var tp = teacherRepo.findByUserId(userId);
-                if (tp != null) {
-                    response.put("details", new JsonObject()
-                            .put("specialization", tp.getSubjectSpecialization())
-                            .put("qualification", tp.getQualification())
-                            .put("salary", tp.getSalary()));
+                            .put("grade", profile.getGrade())
+                            .put("enrollmentNumber", profile.getEnrollmentNumber())
+                            .put("parentName", profile.getParentName()));
                 }
             }
+            else if (user.getRole() == Role.TEACHER) {
+                var profile = teacherRepo.findByUserId(userId);
+                if (profile != null) {
+                    response.put("details", new JsonObject()
+                            .put("specialization", profile.getSubjectSpecialization())
+                            .put("qualification", profile.getQualification())
+                            .put("salary", profile.getSalary()));
+                }
+            }
+
             return response;
         });
     }
