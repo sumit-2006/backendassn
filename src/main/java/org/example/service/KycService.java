@@ -21,10 +21,23 @@ public class KycService {
     }
 
     public Completable submitKycRx(KycRecord record) {
-        return Completable.fromAction(() -> {
+        /*return Completable.fromAction(() -> {
             validateIdFormat(record.getGovtIdType().name(), record.getGovtIdNumber());
             record.setStatus(KycStatus.SUBMITTED);
             kycRepo.save(record);
+            triggerAiAnalysis(record);
+        });*/
+        return Completable.fromAction(() -> {
+            validateIdFormat(record.getGovtIdType().name(), record.getGovtIdNumber());
+
+            // Ensure status is reset to SUBMITTED (in case it was REJECTED)
+            record.setStatus(KycStatus.SUBMITTED);
+
+            // Clear old AI flags on re-submission
+            record.setAiStatus(null);
+            record.setAiRiskFlags(null);
+
+            kycRepo.save(record); // This performs INSERT or UPDATE based on ID
             triggerAiAnalysis(record);
         });
     }
@@ -86,6 +99,27 @@ public class KycService {
             record.setStatus(status);
             record.setAdminRemarks(remarks);
             kycRepo.save(record);
+        });
+    }
+
+    public Single<KycRecord> getKycByIdRx(Long kycId) {
+        return Single.fromCallable(() -> {
+            KycRecord record = kycRepo.findById(kycId);
+            if (record == null) throw new RuntimeException("KYC Record not found");
+            return record;
+        });
+    }
+    public Completable retryAiAnalysis(Long kycId) {
+        return Completable.fromAction(() -> {
+            KycRecord record = kycRepo.findById(kycId);
+            if (record == null) throw new RuntimeException("KYC Record not found");
+
+
+            record.setAiStatus("AI_PROCESSING");
+            kycRepo.save(record);
+
+
+            triggerAiAnalysis(record);
         });
     }
 }

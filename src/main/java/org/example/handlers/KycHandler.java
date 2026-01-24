@@ -95,6 +95,7 @@ public class KycHandler {
     }
 
 
+
     public void getStatus(RoutingContext ctx) {
         Long userId = ctx.get("userId");
         kycService.getStatusRx(userId).subscribe(
@@ -134,6 +135,31 @@ public class KycHandler {
             );
         } catch (Exception e) {
             ctx.response().setStatusCode(400).end("Invalid Request");
+        }
+    }
+
+    public void getKycDetails(RoutingContext ctx) {
+        try {
+            Long kycId = Long.parseLong(ctx.pathParam("id"));
+            kycService.getKycByIdRx(kycId).subscribe(
+                    record -> ctx.response()
+                            .putHeader("content-type", "application/json")
+                            .end(JsonObject.mapFrom(record).encodePrettily()),
+                    err -> ctx.response().setStatusCode(404).end(new JsonObject().put("error", err.getMessage()).encode())
+            );
+        } catch (Exception e) {
+            ctx.response().setStatusCode(400).end("Invalid ID");
+        }
+    }
+    public void retryAi(RoutingContext ctx) {
+        try {
+            Long kycId = Long.parseLong(ctx.pathParam("id"));
+            kycService.retryAiAnalysis(kycId).subscribe(
+                    () -> ctx.response().setStatusCode(200).end(new JsonObject().put("message", "AI Analysis Restarted").encode()),
+                    err -> ctx.response().setStatusCode(400).end(new JsonObject().put("error", err.getMessage()).encode())
+            );
+        } catch (Exception e) {
+            ctx.response().setStatusCode(400).end("Invalid ID");
         }
     }
 }

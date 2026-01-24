@@ -57,7 +57,7 @@ public class AuthService {
 
     public Single<JsonObject> getProfileRx(Long userId) {
         return Single.fromCallable(() -> {
-            // A. Get Common Info
+
             User user = userRepo.findById(userId);
             if (user == null) throw new RuntimeException("User not found");
 

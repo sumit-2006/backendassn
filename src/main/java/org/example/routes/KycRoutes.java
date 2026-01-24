@@ -22,5 +22,12 @@ public class KycRoutes {
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::reviewKyc);
 
+        router.get("/admin/kyc/:id")
+                .handler(auth::handle)
+                .handler(RoleGuard.only("ADMIN")::handle)
+                .handler(handler::getKycDetails);
+
+
+
     }
 }

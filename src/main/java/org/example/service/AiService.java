@@ -3,97 +3,96 @@ package org.example.service;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+// ✅ CORRECT IMPORTS
 import io.vertx.rxjava3.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+
 import io.vertx.rxjava3.ext.web.client.WebClient;
 import org.example.dto.AiAnalysisResult;
 import org.example.entity.KycRecord;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.Base64;
 
 public class AiService {
 
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
+    private final Vertx vertx;
+
     public AiService(Vertx vertx, String apiKey, String model) {
+        this.vertx = vertx;
         this.webClient = WebClient.create(vertx);
         this.apiKey = apiKey;
         this.model = model;
     }
 
     public Single<AiAnalysisResult> analyzeDocument(KycRecord record) {
-
-        String promptText = String.format(
-                "Role: You are a generic KYC Verification Assistant.\n" +
-                        "Task: Analyze the uploaded KYC document metadata and return confidence-based insights without making final decisions.\n\n" +
-
-                        "--- Context ---\n" +
-                        "User Role: %s\n" +
-                        "Document Type: %s\n" +
-                        "Extracted Metadata: Name='%s', ID Number='%s'\n\n" +
-
-                        "--- Instructions ---\n" +
-                        "1. Validate Plausibility: Does the ID format match standard regex for this document type?\n" +
-                        "2. Highlight Risks: Flag issues like 'Test Data', 'Mismatched Name', or 'Suspicious Number sequences'.\n" +
-                        "3. Avoid Decisions: Do NOT say 'Approved' or 'Rejected'. Only provide a confidence score and flags.\n\n" +
-
-                        "--- Output Format (JSON Only) ---\n" +
-                        "{ \"status\": \"AI_CLEAR\" (if >80 confidence) or \"AI_FLAGGED\", " +
-                        "\"confidenceScore\": (0-100), " +
-                        "\"recommendation\": \"AUTO_APPROVE\" or \"MANUAL_REVIEW\", " +
-                        "\"riskFlags\": [\"List\", \"Of\", \"Risks\"] }",
-
-                record.getUser().getRole(),
-                record.getGovtIdType(),
-                record.getUser().getFullName(),
-                record.getGovtIdNumber()
-        );
-
-        JsonObject payload = new JsonObject()
-                .put("model", model)
-                .put("messages", new JsonArray().add(new JsonObject().put("role", "user").put("content", promptText)));
+        String filePath = "file-uploads/" + record.getDocumentPath();
 
 
-        return webClient.postAbs("https://openrouter.ai/api/v1/chat/completions")
-                .putHeader("Authorization", "Bearer " + apiKey)
-                .putHeader("Content-Type", "application/json")
-                .rxSendJsonObject(payload)
-                .map(response -> {
-                    if (response.statusCode() != 200) {
-                        throw new RuntimeException("AI API Error: " + response.statusMessage());
-                    }
+        return vertx.fileSystem().rxExists(filePath)
+                .flatMap(exists -> {
+                    if (!exists) return Single.error(new RuntimeException("File not found at: " + filePath));
+                    return vertx.fileSystem().rxReadFile(filePath);
+                })
+                .map(buffer -> Base64.getEncoder().encodeToString(buffer.getBytes()))
+                .flatMap(base64Image -> {
 
 
-                    JsonObject body = response.bodyAsJsonObject();
-                    String aiContent = body.getJsonArray("choices").getJsonObject(0).getJsonObject("message").getString("content");
+                    String promptText = String.format(
+                            "You are a KYC Expert. VISUALLY ANALYZE THIS ID CARD IMAGE.\\n\" +\n" +
+                                    "                    \"User Claims:\\n\" +\n" +
+                                    "                    \"- Name: '%s'\\n\" +\n" +
+                                    "                    \"- ID Number: '%s'\\n\" +\n" +
+                                    "                    \"- ID Type: '%s'\\n\\n\" +\n" +
+                                    "                    \n" +
+                                    "                    \"Task:\\n\" +\n" +
+                                    "                    \"1. OCR Check: Does the text in the image match the User Claims? (Ignore minor typos).\\n\" +\n" +
+                                    "                    \"2. Fraud Check: Is the font consistent? Does it look photoshopped or fake?\\n\" +\n" +
+                                    "                    \"3. Photo Check: Is there a clear photo on the ID?\\n\" +\n" +
+                                    "                    \"4. Quality Check: Is the image too blurry to read?\\n\\n\" +\n" +
+                                    "\n" +
+                                    "                    \"Output JSON Format:\\n\" +\n" +
+                                    "                    \"{ \\\"status\\\": \\\"AI_CLEAR\\\" (only if >80 confidence), \\\"confidenceScore\\\": (0-100), \" +\n" +
+                                    "                    \"\\\"recommendation\\\": \\\"AUTO_APPROVE\\\" or \\\"MANUAL_REVIEW\\\", \" +\n" +
+                                    "                    \"\\\"riskFlags\\\": [\\\"List\\\", \\\"Of\\\", \\\"Findings\\\"] }",
+                            record.getUser().getFullName(),
+                            record.getGovtIdNumber(),
+                            record.getGovtIdType()
+                    );
 
+                    JsonObject userMessage = new JsonObject()
+                            .put("role", "user")
+                            .put("content", new JsonArray()
+                                    .add(new JsonObject().put("type", "text").put("text", promptText))
+                                    .add(new JsonObject().put("type", "image_url").put("image_url", new JsonObject()
+                                            .put("url", "data:image/jpeg;base64," + base64Image)))
+                            );
 
-                    if (aiContent.contains("```json")) {
-                        aiContent = aiContent.replace("```json", "").replace("```", "");
-                    }
+                    JsonObject payload = new JsonObject()
+                            .put("model", model)
+                            .put("messages", new JsonArray().add(userMessage));
 
-                    return new JsonObject(aiContent).mapTo(AiAnalysisResult.class);
+                    // 3. Send Request (Non-blocking)
+                    return webClient.postAbs("https://openrouter.ai/api/v1/chat/completions")
+                            .putHeader("Authorization", "Bearer " + apiKey)
+                            .putHeader("Content-Type", "application/json")
+                            .rxSendJsonObject(payload)
+                            .map(response -> {
+                                if (response.statusCode() != 200) {
+                                    System.err.println("❌ AI API Error: " + response.bodyAsString());
+                                    throw new RuntimeException("AI API Error: " + response.statusMessage());
+                                }
+
+                                JsonObject body = response.bodyAsJsonObject();
+                                String aiContent = body.getJsonArray("choices").getJsonObject(0).getJsonObject("message").getString("content");
+
+                                if (aiContent.contains("```json")) {
+                                    aiContent = aiContent.replace("```json", "").replace("```", "");
+                                }
+
+                                return new JsonObject(aiContent).mapTo(AiAnalysisResult.class);
+                            });
                 });
     }
-    /* // --- REAL IMPLEMENTATION (For Bonus/Prod) ---
-
-
-    public Single<AiAnalysisResult> callOpenRouter(KycRecord record) {
-        JsonObject prompt = new JsonObject()
-            .put("model", "mistralai/mistral-7b-instruct")
-            .put("messages", new JsonArray().add(new JsonObject()
-                .put("role", "user")
-                .put("content", "Analyze this KYC data: Name=" + record.getUser().getFullName() + "...")));
-
-        return webClient.postAbs("https://openrouter.ai/api/v1/chat/completions")
-            .putHeader("Authorization", "Bearer YOUR_KEY")
-            .rxSendJsonObject(prompt)
-            .map(resp -> {
-                // Parse JSON response to AiAnalysisResult
-                return new AiAnalysisResult();
-            });
-    }
-    */
 }
