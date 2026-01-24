@@ -25,13 +25,11 @@ public abstract class BaseEntity extends Model {
     @Column(nullable = false)
     private Boolean isDeleted = false;
 
-    // ✅ Soft delete method
     public void softDelete() {
         this.isDeleted = true;
         this.save();
     }
 
-    // Getters/Setters
     public Long getId() { return id; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

@@ -40,7 +40,7 @@ public class AdminService {
         return userRepo;
     }
 
-    // Single User Onboarding
+
     public Completable onboardUserRx(OnboardRequest request) {
         return Completable.fromAction(() -> {
             if (userRepo.findByEmail(request.getEmail()) != null) {
@@ -76,7 +76,7 @@ public class AdminService {
         });
     }
 
-    // ✅ NEW: Bulk Import Method (Fixes "no method" error)
+
     public Single<JsonObject> bulkImportRx(String filePath) {
         return Single.fromCallable(() -> {
             List<String> errors = new ArrayList<>();
@@ -89,12 +89,12 @@ public class AdminService {
 
                 while ((line = br.readLine()) != null) {
                     rowNum++;
-                    // Skip Header or Empty Lines
+
                     if (rowNum == 1 && line.toLowerCase().contains("email")) continue;
                     if (line.trim().isEmpty()) continue;
 
                     String[] parts = line.split(",");
-                    // Expecting 7 columns: Name, Email, Mobile, Role, Param1, Param2, Param3
+
                     if (parts.length < 7) {
                         errors.add("Row " + rowNum + ": Invalid format. Expected 7 columns.");
                         failureCount++;
@@ -107,7 +107,6 @@ public class AdminService {
                         String mobile = parts[2].trim();
                         Role role = Role.valueOf(parts[3].trim().toUpperCase());
 
-                        // Profile Params
                         String p1 = parts[4].trim();
                         String p2 = parts[5].trim();
                         String p3 = parts[6].trim();
@@ -116,7 +115,7 @@ public class AdminService {
                             throw new RuntimeException("Email already exists");
                         }
 
-                        // Create User
+
                         User user = new User();
                         user.setFullName(name);
                         user.setEmail(email);
@@ -125,7 +124,7 @@ public class AdminService {
                         user.setPasswordHash(PasswordUtil.hash("Temp@123")); // Default password
                         userRepo.save(user);
 
-                        // Save Profile
+
                         if (role == Role.STUDENT) {
                             StudentProfile sp = new StudentProfile();
                             sp.setUser(user);
@@ -160,9 +159,7 @@ public class AdminService {
         });
     }
 
-    // --- PHASE 1: ASYNC BULK IMPORT ---
 
-    // 1. Initiate: Creates record, returns ID, starts background thread
     public Single<JsonObject> initiateBulkImport(Long adminId, String filePath) {
         return Single.fromCallable(() -> {
             User admin = userRepo.findById(adminId);
@@ -190,7 +187,7 @@ public class AdminService {
         });
     }
 
-    // 2. Process: The heavy lifting (Background)
+
     private void processBulkFile(Long uploadId, String filePath) {
         BulkUpload upload = bulkUploadRepo.findById(uploadId);
         List<String> errors = new ArrayList<>();
@@ -202,12 +199,10 @@ public class AdminService {
             int rowNum = 0;
             while ((line = br.readLine()) != null) {
                 rowNum++;
-                // Skip Header
                 if (rowNum == 1 && line.toLowerCase().contains("email")) continue;
                 if (line.trim().isEmpty()) continue;
 
                 try {
-                    // -1 limit ensures empty trailing strings are included (though split works for middle empty too)
                     String[] parts = line.split(",", -1);
 
                     if (parts.length < 5) throw new RuntimeException("Insufficient columns");
@@ -224,7 +219,7 @@ public class AdminService {
                     if (mobile.isEmpty()) throw new RuntimeException("Mobile is required");
                     if (password.isEmpty()) throw new RuntimeException("Password is required");
 
-                    // Validate Role Enum
+
                     Role role;
                     try {
                         role = Role.valueOf(roleStr);
@@ -232,18 +227,18 @@ public class AdminService {
                         throw new RuntimeException("Invalid Role: " + roleStr);
                     }
 
-                    // Optional: Simple Regex for Email (Good to have)
+
                     if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
                         throw new RuntimeException("Invalid Email Format");
                     }
 
-                    // Profile Params (Handle potential IndexOutOfBounds if they are missing in CSV)
+
                     String p1 = parts.length > 5 ? parts[5].trim() : null; // Enrollment / Specialization
                     String p2 = parts.length > 6 ? parts[6].trim() : null; // Grade / Qualification
                     String p3 = parts.length > 7 ? parts[7].trim() : null; // Parent / Salary
                     String p4 = parts.length > 8 ? parts[8].trim() : null; // Exp Years
 
-                    // Parse Numbers safely
+
                     Double salary = (p3 != null && !p3.isEmpty() && role == Role.TEACHER) ? Double.parseDouble(p3) : null;
                     Integer expYears = (p4 != null && !p4.isEmpty() && role == Role.TEACHER) ? Integer.parseInt(p4) : null;
 
@@ -257,7 +252,7 @@ public class AdminService {
                 }
             }
 
-            // ... (Rest of the method remains the same: saving upload status) ...
+
             upload.setSuccessCount(success);
             upload.setFailureCount(failed);
             upload.setTotalRecords(success + failed);
@@ -281,7 +276,7 @@ public class AdminService {
         }
     }
 
-    // Helper to avoid duplication
+
     private void createUserAndProfile(String name, String email, String mobile, Role role, String password,
                                       String p1, String p2, String p3, String p4, String p5, Double p6, Integer p7, String p8) {
         if (userRepo.findByEmail(email) != null) throw new RuntimeException("Email " + email + " already exists");
@@ -313,13 +308,13 @@ public class AdminService {
         }
     }
 
-    // --- PHASE 1: ENABLE/DISABLE USER ---
+
     public Single<JsonObject> updateUserStatusRx(Long userId, UserStatus status) {
         return Single.fromCallable(() -> {
             User user = userRepo.findById(userId);
             if (user == null) throw new RuntimeException("User not found");
 
-            // Prevent Admin from disabling themselves
+
             if (user.getRole() == Role.ADMIN) throw new RuntimeException("Cannot disable Admin users");
 
             user.setStatus(status);
@@ -331,13 +326,13 @@ public class AdminService {
     public BulkUploadRepository getBulkUploadRepo() {
         return bulkUploadRepo;
     }
-    // Soft Delete User (Mark as deleted)
+
     public Single<JsonObject> deleteUserRx(Long userId) {
         return Single.fromCallable(() -> {
             User user = userRepo.findById(userId);
             if (user == null) throw new RuntimeException("User not found");
 
-            // Prevent deleting yourself (Admin)
+
             if (user.getRole() == Role.ADMIN) throw new RuntimeException("Cannot delete Admin");
 
             user.setIsDeleted(true); // Matches BaseEntity.isDeleted

@@ -37,10 +37,10 @@ public class KycRecord extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String adminRemarks;
-    // Add these fields to your existing class
+
 
     @Column(name = "ai_status")
-    private String aiStatus; // Or create an Enum if preferred
+    private String aiStatus;
 
     @Column(name = "ai_confidence_score")
     private Integer aiConfidenceScore;
@@ -48,11 +48,10 @@ public class KycRecord extends BaseEntity {
     @Column(name = "ai_recommendation")
     private String aiRecommendation;
 
-    @DbJson // Requires Ebean JSON support
+    @DbJson
     @Column(name = "ai_risk_flags", columnDefinition = "json")
     private List<String> aiRiskFlags;
 
-    // Add Getters and Setters for these new fields
     public String getAiStatus() { return aiStatus; }
     public void setAiStatus(String aiStatus) { this.aiStatus = aiStatus; }
 
@@ -65,7 +64,7 @@ public class KycRecord extends BaseEntity {
     public List<String> getAiRiskFlags() { return aiRiskFlags; }
     public void setAiRiskFlags(List<String> aiRiskFlags) { this.aiRiskFlags = aiRiskFlags; }
 
-    // Getters and Setters
+
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
     public String getAddress() { return address; }

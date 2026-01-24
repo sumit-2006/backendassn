@@ -17,11 +17,10 @@ public class AdminHandler {
     public void onboard(RoutingContext ctx) {
         try {
             JsonObject body = ctx.body().asJsonObject();
-            // Map JSON to DTO
+
             OnboardRequest req = body.mapTo(OnboardRequest.class);
 
-            // ✅ FIX: Pass the 'req' object directly to Service.
-            // The Service now handles creating the User and the Profile (Student/Teacher).
+
             adminService.onboardUserRx(req)
                     .subscribe(
                             () -> ctx.response().setStatusCode(201).end(new JsonObject()
@@ -58,10 +57,9 @@ public class AdminHandler {
         }
     }
 
-    // Keep this if you have implemented Phase 5 (Bulk Import)
 
 
-    // --- NEW: ASYNC BULK IMPORT ---
+
     public void bulkImport(RoutingContext ctx) {
         if (ctx.fileUploads().isEmpty()) {
             ctx.response().setStatusCode(400).end("CSV file is mandatory");

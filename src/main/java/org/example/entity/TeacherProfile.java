@@ -15,8 +15,8 @@ public class TeacherProfile extends BaseEntity {
     private String qualification;
     private Double salary;
 
-    // Getters and Setters
-    // Getter and Setter
+
+
     public Integer getExperienceYears() { return experienceYears; }
     public void setExperienceYears(Integer experienceYears) { this.experienceYears = experienceYears; }
     public User getUser() { return user; }

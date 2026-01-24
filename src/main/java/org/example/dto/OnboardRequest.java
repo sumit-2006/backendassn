@@ -8,21 +8,20 @@ public class OnboardRequest {
     private String email;
     private String mobileNumber;
     private Role role;
-    private String initialPassword; // Field from doc
-    private Integer experienceYears; // ✅ Added
-    private String courseEnrolled; // ✅ Added
+    private String initialPassword;
+    private Integer experienceYears;
+    private String courseEnrolled;
 
-    // ✅ NEW: Student Specific Fields
+
     private String enrollmentNumber;
     private String grade;
     private String parentName;
 
-    // ✅ NEW: Teacher Specific Fields
+
     private String subjectSpecialization;
     private String qualification;
     private Double salary;
 
-    // --- Getters and Setters (REQUIRED for the Service code to work) ---
 
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
@@ -39,7 +38,7 @@ public class OnboardRequest {
     public String getInitialPassword() { return initialPassword; }
     public void setInitialPassword(String initialPassword) { this.initialPassword = initialPassword; }
 
-    // Student Data Accessors
+
     public String getEnrollmentNumber() { return enrollmentNumber; }
     public void setEnrollmentNumber(String enrollmentNumber) { this.enrollmentNumber = enrollmentNumber; }
 
@@ -59,7 +58,7 @@ public class OnboardRequest {
     public Double getSalary() { return salary; }
     public void setSalary(Double salary) { this.salary = salary; }
 
-    // ✅ New Getters/Setters
+
     public String getCourseEnrolled() { return courseEnrolled; }
     public void setCourseEnrolled(String courseEnrolled) { this.courseEnrolled = courseEnrolled; }
 

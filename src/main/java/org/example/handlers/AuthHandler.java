@@ -20,7 +20,7 @@ public class AuthHandler {
         this.secret = secret;
     }
 
-    // Example for AuthHandler.java
+
     public void login(RoutingContext ctx) {
         LoginRequest req = ctx.body().asJsonObject().mapTo(LoginRequest.class);
 

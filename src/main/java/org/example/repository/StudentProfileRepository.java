@@ -11,7 +11,7 @@ public class StudentProfileRepository {
         db.save(profile);
     }
 
-    // Add this method inside the class
+
     public org.example.entity.StudentProfile findByUserId(Long userId) {
         return org.example.config.DbConfig.getDatabase()
                 .find(org.example.entity.StudentProfile.class)

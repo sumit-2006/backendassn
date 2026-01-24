@@ -13,7 +13,7 @@ import java.util.UUID;
 public class JwtUtil {
 
     private static Key getKey(String secret) {
-        // secret length should be >= 32 chars for HS256
+
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 

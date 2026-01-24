@@ -15,7 +15,6 @@ public class AdminRoutes {
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::listUsers);
-        // Inside register() method
         /*router.post("/admin/users/bulk")
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)
@@ -26,19 +25,19 @@ public class AdminRoutes {
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::changeUserStatus);
 
-        // ✅ NEW: Async Bulk Import
+
         router.post("/admin/users/bulk")
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::bulkImport);
 
-        // ✅ NEW: Check Bulk Status
+
         router.get("/admin/uploads/:id/status")
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::getBulkStatus);
 
-        // ✅ NEW: Soft Delete User
+
         router.delete("/admin/users/:userId")
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)

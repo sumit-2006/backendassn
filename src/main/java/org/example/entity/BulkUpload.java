@@ -32,6 +32,5 @@ public class BulkUpload extends BaseEntity {
     @Column(columnDefinition = "json")
     private List<String> errorReport;
 
-    // ❌ REMOVED: private LocalDateTime createdAt;
-    // ✅ REASON: It is already inherited from BaseEntity
+
 }

@@ -4,13 +4,10 @@ public class UpdateProfileRequest {
     private String fullName;
     private String mobileNumber;
     private String courseEnrolled;
-    // Student specific
     private String parentName;
     private Integer experienceYears;
-    // Teacher specific
     private String qualification;
 
-    // Getters and Setters
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
 

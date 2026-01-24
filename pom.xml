@@ -43,7 +43,7 @@
                 <configuration>
                     <release>17</release>
 
-                    <!-- ✅ Lombok annotation processor -->
+
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -103,14 +103,14 @@
             <version>2.0.16</version>
         </dependency>
 
-        <!-- BCrypt -->
+
         <dependency>
             <groupId>org.mindrot</groupId>
             <artifactId>jbcrypt</artifactId>
             <version>0.4</version>
         </dependency>
 
-        <!-- JWT -->
+
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -134,7 +134,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Source: https://mvnrepository.com/artifact/io.ebean/ebean-ddl-generator -->
+
         <dependency>
             <groupId>io.ebean</groupId>
             <artifactId>ebean-ddl-generator</artifactId>

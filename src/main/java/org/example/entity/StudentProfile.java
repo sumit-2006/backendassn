@@ -15,8 +15,7 @@ public class StudentProfile extends BaseEntity {
     private String grade;
     private String parentName;
 
-    // Getters and Setters
-    // Getter and Setter
+
     public String getCourseEnrolled() { return courseEnrolled; }
     public void setCourseEnrolled(String courseEnrolled) { this.courseEnrolled = courseEnrolled; }
     public User getUser() { return user; }

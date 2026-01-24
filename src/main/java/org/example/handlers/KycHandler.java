@@ -20,7 +20,7 @@ public class KycHandler {
         this.userRepo = userRepo;
     }
 
-    // ✅ ROBUST SUBMIT: Renames file to "user_101_kyc.png"
+
     public void submit(RoutingContext ctx) {
         try {
             // 1. Validation: Verify file upload
@@ -31,13 +31,13 @@ public class KycHandler {
 
             var file = ctx.fileUploads().get(0);
 
-            // 2. Validation: File type check
+
             if (!file.contentType().matches("application/pdf|image/jpeg|image/png")) {
                 ctx.response().setStatusCode(400).end("Allowed file types: PDF, JPG, PNG");
                 return;
             }
 
-            // --- FILE RENAMING LOGIC START ---
+
             Long currentUserId = ctx.get("userId"); // Get the User ID from Token
 
             String originalName = file.fileName();
@@ -47,20 +47,20 @@ public class KycHandler {
                 extension = originalName.substring(i); // e.g. ".png"
             }
 
-            // New Readable Filename: user_5_kyc.png
+
             String newFileName = "user_" + currentUserId + "_kyc" + extension;
             String newPath = "file-uploads/" + newFileName;
             if (ctx.vertx().fileSystem().existsBlocking(newPath)) {
                 ctx.vertx().fileSystem().deleteBlocking(newPath);
             }
-            // Move & Rename the file
-            ctx.vertx().fileSystem().moveBlocking(file.uploadedFileName(), newPath);
-            // --- FILE RENAMING LOGIC END ---
 
-            // 3. Create Record
+            ctx.vertx().fileSystem().moveBlocking(file.uploadedFileName(), newPath);
+
+
+
             KycRecord record = new KycRecord();
 
-            // Input Cleaning (Trimming)
+
             String address = ctx.request().getFormAttribute("address");
             if (address == null || address.isBlank()) throw new RuntimeException("Address is required");
             record.setAddress(address.trim());
@@ -77,12 +77,12 @@ public class KycHandler {
             if (idNumRaw == null || idNumRaw.isBlank()) throw new RuntimeException("Govt ID Number is required");
             record.setGovtIdNumber(idNumRaw.trim());
 
-            // Save the READABLE filename to DB
+
             record.setDocumentPath(newFileName);
 
             record.setUser(userRepo.getReference(currentUserId));
 
-            // Submit
+
             kycService.submitKycRx(record).subscribe(
                     () -> ctx.response().setStatusCode(201).end(new JsonObject()
                             .put("message", "KYC submitted successfully").encode()),
@@ -94,7 +94,7 @@ public class KycHandler {
         }
     }
 
-    // ... Keep getStatus, getPendingReviews, reviewKyc exactly as they were ...
+
     public void getStatus(RoutingContext ctx) {
         Long userId = ctx.get("userId");
         kycService.getStatusRx(userId).subscribe(

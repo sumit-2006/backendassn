@@ -22,14 +22,14 @@ public class DbConfig {
         try {
             Properties props = new Properties();
 
-            // ✅ Load all settings from application.properties
+
             InputStream is = DbConfig.class.getClassLoader().getResourceAsStream("application.properties");
             if (is == null) {
                 throw new RuntimeException("application.properties not found in src/main/resources");
             }
             props.load(is);
 
-            // ✅ Create DatabaseConfig and load everything
+
             DatabaseConfig config = new DatabaseConfig();
             config.loadFromProperties(props);
 

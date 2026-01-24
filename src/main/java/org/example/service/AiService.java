@@ -22,17 +22,17 @@ public class AiService {
         this.apiKey = apiKey;
         this.model = model;
     }
-    // Simulates an AI analysis (Use this for assignment submission if no API Key)
+
     public Single<AiAnalysisResult> analyzeDocument(KycRecord record) {
-        // 1. Construct the Prompt
+
         String promptText = String.format(
                 "Role: You are a generic KYC Verification Assistant.\n" +
                         "Task: Analyze the uploaded KYC document metadata and return confidence-based insights without making final decisions.\n\n" +
 
                         "--- Context ---\n" +
-                        "User Role: %s\n" + // [Req: User Role]
-                        "Document Type: %s\n" + // [Req: Document Type]
-                        "Extracted Metadata: Name='%s', ID Number='%s'\n\n" + // [Req: Metadata]
+                        "User Role: %s\n" +
+                        "Document Type: %s\n" +
+                        "Extracted Metadata: Name='%s', ID Number='%s'\n\n" +
 
                         "--- Instructions ---\n" +
                         "1. Validate Plausibility: Does the ID format match standard regex for this document type?\n" +
@@ -45,8 +45,8 @@ public class AiService {
                         "\"recommendation\": \"AUTO_APPROVE\" or \"MANUAL_REVIEW\", " +
                         "\"riskFlags\": [\"List\", \"Of\", \"Risks\"] }",
 
-                record.getUser().getRole(), // Passed Role
-                record.getGovtIdType(),     // Passed Doc Type
+                record.getUser().getRole(),
+                record.getGovtIdType(),
                 record.getUser().getFullName(),
                 record.getGovtIdNumber()
         );
@@ -55,7 +55,7 @@ public class AiService {
                 .put("model", model)
                 .put("messages", new JsonArray().add(new JsonObject().put("role", "user").put("content", promptText)));
 
-        // 2. Call OpenRouter / OpenAI API
+
         return webClient.postAbs("https://openrouter.ai/api/v1/chat/completions")
                 .putHeader("Authorization", "Bearer " + apiKey)
                 .putHeader("Content-Type", "application/json")
@@ -65,11 +65,11 @@ public class AiService {
                         throw new RuntimeException("AI API Error: " + response.statusMessage());
                     }
 
-                    // 3. Parse Response
+
                     JsonObject body = response.bodyAsJsonObject();
                     String aiContent = body.getJsonArray("choices").getJsonObject(0).getJsonObject("message").getString("content");
 
-                    // Clean markdown code blocks if present
+
                     if (aiContent.contains("```json")) {
                         aiContent = aiContent.replace("```json", "").replace("```", "");
                     }
@@ -78,8 +78,7 @@ public class AiService {
                 });
     }
     /* // --- REAL IMPLEMENTATION (For Bonus/Prod) ---
-    // You would use Vert.x WebClient to call OpenRouter/OpenAI here.
-    private WebClient webClient; // Inject this in constructor
+
 
     public Single<AiAnalysisResult> callOpenRouter(KycRecord record) {
         JsonObject prompt = new JsonObject()

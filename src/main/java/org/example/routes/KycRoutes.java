@@ -21,7 +21,6 @@ public class KycRoutes {
                 .handler(auth::handle)
                 .handler(RoleGuard.only("ADMIN")::handle)
                 .handler(handler::reviewKyc);
-        // Admin KYC Review Endpoints
-        // router.get("/admin/kyc/review").handler(auth::handle)...
+
     }
 }

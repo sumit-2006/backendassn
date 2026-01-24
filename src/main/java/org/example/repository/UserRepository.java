@@ -15,7 +15,7 @@ public class UserRepository {
                 .eq("isDeleted", false) // Requirement: Soft delete check
                 .findOne();
     }
-    // src/main/java/org/example/repository/UserRepository.java
+
     public User getReference(Long id) {
         return db.reference(User.class, id);
     }
@@ -23,7 +23,7 @@ public class UserRepository {
         db.save(user);
     }
 
-    // Add to UserRepository.java
+
     public io.ebean.PagedList<User> findPaged(int page, int size, org.example.entity.enums.Role role) {
         var query = db.find(User.class)
                 .where()

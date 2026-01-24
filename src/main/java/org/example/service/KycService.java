@@ -7,7 +7,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.example.entity.KycRecord;
 import org.example.entity.enums.KycStatus;
 import org.example.repository.KycRepository;
-// ✅ Import AI classes
+
 import org.example.dto.AiAnalysisResult;
 import org.example.service.AiService;
 
@@ -29,18 +29,17 @@ public class KycService {
         });
     }
 
-    // New Helper for AI Trigger
+
     private void triggerAiAnalysis(KycRecord record) {
         aiService.analyzeDocument(record)
                 .subscribeOn(Schedulers.io()) // Run in background
                 .subscribe(
                         result -> {
-                            // Update DB with AI Results
-                            // Note: We fetch a fresh record or update the existing one attached to context
-                            record.setAiStatus(result.getStatus()); // Ensure you added this field to Entity!
+
+                            record.setAiStatus(result.getStatus());
                             record.setAiConfidenceScore(result.getConfidenceScore());
                             record.setAiRecommendation(result.getRecommendation());
-                            record.setAiRiskFlags(result.getRiskFlags()); // Ensure Entity has List<String> or JSON support
+                            record.setAiRiskFlags(result.getRiskFlags());
 
                             kycRepo.save(record);
                         },

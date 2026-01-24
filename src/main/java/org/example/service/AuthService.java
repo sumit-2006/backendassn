@@ -10,7 +10,7 @@ import org.example.repository.UserRepository;
 import org.example.utils.JwtUtil;
 import org.example.utils.PasswordUtil;
 
-// src/main/java/org/example/service/AuthService.java
+
 import io.reactivex.rxjava3.core.Single;
 
 public class AuthService {
@@ -54,8 +54,7 @@ public class AuthService {
         });
     }
 
-    // ✅ THIS IS THE METHOD YOU WERE MISSING
-    // 3. The New Logic for Profile
+
     public Single<JsonObject> getProfileRx(Long userId) {
         return Single.fromCallable(() -> {
             // A. Get Common Info
@@ -94,22 +93,22 @@ public class AuthService {
             return response;
         });
     }
-    // In AuthService.java
+
     public Single<JsonObject> updateProfileRx(Long userId, org.example.dto.UpdateProfileRequest req) {
         return Single.fromCallable(() -> {
             User user = userRepo.findById(userId);
             if (user == null) throw new RuntimeException("User not found");
 
-            // 1. Common Fields [cite: 873]
+
             if (req.getFullName() != null) user.setFullName(req.getFullName());
             if (req.getMobileNumber() != null) user.setMobileNumber(req.getMobileNumber());
             userRepo.save(user);
 
-            // 2. Role Specific Fields
+
             if (user.getRole() == Role.STUDENT) {
                 var profile = studentRepo.findByUserId(userId);
                 if (profile != null) {
-                    // ✅ Requirement 15.4: courseEnrolled
+
                     if (req.getCourseEnrolled() != null) profile.setCourseEnrolled(req.getCourseEnrolled());
                     studentRepo.save(profile);
                 }
@@ -117,7 +116,7 @@ public class AuthService {
             else if (user.getRole() == Role.TEACHER) {
                 var profile = teacherRepo.findByUserId(userId);
                 if (profile != null) {
-                    // ✅ Requirement 15.3: qualification & experienceYears
+
                     if (req.getQualification() != null) profile.setQualification(req.getQualification());
                     if (req.getExperienceYears() != null) profile.setExperienceYears(req.getExperienceYears());
                     teacherRepo.save(profile);
