@@ -30,14 +30,14 @@ public class KycService {
         return Completable.fromAction(() -> {
             validateIdFormat(record.getGovtIdType().name(), record.getGovtIdNumber());
 
-            // Ensure status is reset to SUBMITTED (in case it was REJECTED)
+
             record.setStatus(KycStatus.SUBMITTED);
 
-            // Clear old AI flags on re-submission
+
             record.setAiStatus(null);
             record.setAiRiskFlags(null);
 
-            kycRepo.save(record); // This performs INSERT or UPDATE based on ID
+            kycRepo.save(record);
             triggerAiAnalysis(record);
         });
     }
@@ -45,14 +45,18 @@ public class KycService {
 
     private void triggerAiAnalysis(KycRecord record) {
         aiService.analyzeDocument(record)
-                .subscribeOn(Schedulers.io()) // Run in background
+                .subscribeOn(Schedulers.io())
                 .subscribe(
                         result -> {
 
                             record.setAiStatus(result.getStatus());
                             record.setAiConfidenceScore(result.getConfidenceScore());
                             record.setAiRecommendation(result.getRecommendation());
-                            record.setAiRiskFlags(result.getRiskFlags());
+                            if (result.getRiskFlags() != null && !result.getRiskFlags().isEmpty()) {
+                                record.setAiRiskFlags(String.join(", ", result.getRiskFlags()));
+                            } else {
+                                record.setAiRiskFlags("");
+                            }
 
                             kycRepo.save(record);
                         },

@@ -28,7 +28,7 @@ public class MainVerticle extends AbstractVerticle {
             if (is == null) throw new RuntimeException("application.properties not found");
             props.load(is);
         } catch (Exception e) {
-            System.err.println("❌ Failed to load config: " + e.getMessage());
+            System.err.println("Failed to load config: " + e.getMessage());
             return;
         }
 
@@ -71,7 +71,7 @@ public class MainVerticle extends AbstractVerticle {
         vertx.createHttpServer()
                 .requestHandler(router)
                 .listen(8080)
-                .onSuccess(server -> System.out.println("✅ HTTP Server started on port " + server.actualPort()))
-                .onFailure(err -> System.out.println("❌ Failed to start server: " + err.getMessage()));
+                .onSuccess(server -> System.out.println("HTTP Server started on port " + server.actualPort()))
+                .onFailure(err -> System.out.println("Failed to start server: " + err.getMessage()));
     }
 }

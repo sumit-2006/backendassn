@@ -45,12 +45,12 @@ public class KycRecord extends BaseEntity {
     @Column(name = "ai_confidence_score")
     private Integer aiConfidenceScore;
 
-    @Column(name = "ai_recommendation")
+    @Lob
+    @Column(name = "ai_recommendation",columnDefinition = "TEXT")
     private String aiRecommendation;
-
-    @DbJson
-    @Column(name = "ai_risk_flags", columnDefinition = "json")
-    private List<String> aiRiskFlags;
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String aiRiskFlags;
 
     public String getAiStatus() { return aiStatus; }
     public void setAiStatus(String aiStatus) { this.aiStatus = aiStatus; }
@@ -61,8 +61,8 @@ public class KycRecord extends BaseEntity {
     public String getAiRecommendation() { return aiRecommendation; }
     public void setAiRecommendation(String aiRecommendation) { this.aiRecommendation = aiRecommendation; }
 
-    public List<String> getAiRiskFlags() { return aiRiskFlags; }
-    public void setAiRiskFlags(List<String> aiRiskFlags) { this.aiRiskFlags = aiRiskFlags; }
+    public String getAiRiskFlags() { return aiRiskFlags; }
+    public void setAiRiskFlags(String aiRiskFlags) { this.aiRiskFlags = aiRiskFlags; }
 
 
     public User getUser() { return user; }

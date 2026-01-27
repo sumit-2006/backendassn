@@ -3,96 +3,103 @@ package org.example.service;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-// ✅ CORRECT IMPORTS
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-
 import io.vertx.rxjava3.ext.web.client.WebClient;
 import org.example.dto.AiAnalysisResult;
 import org.example.entity.KycRecord;
 import java.util.Base64;
+import java.util.Collections;
 
 public class AiService {
 
     private final WebClient webClient;
     private final String apiKey;
-    private final String model;
+    private final String model; // ✅ Added model field
     private final Vertx vertx;
 
     public AiService(Vertx vertx, String apiKey, String model) {
         this.vertx = vertx;
         this.webClient = WebClient.create(vertx);
         this.apiKey = apiKey;
-        this.model = model;
+        this.model = model; // ✅ Store it
     }
 
     public Single<AiAnalysisResult> analyzeDocument(KycRecord record) {
         String filePath = "file-uploads/" + record.getDocumentPath();
 
-
         return vertx.fileSystem().rxExists(filePath)
                 .flatMap(exists -> {
-                    if (!exists) return Single.error(new RuntimeException("File not found at: " + filePath));
+                    if (!exists) return Single.error(new RuntimeException("File not found"));
                     return vertx.fileSystem().rxReadFile(filePath);
                 })
                 .map(buffer -> Base64.getEncoder().encodeToString(buffer.getBytes()))
                 .flatMap(base64Image -> {
+                    String mimeType = "image/jpeg";
+                    String pathLower = record.getDocumentPath().toLowerCase();
 
+                    if (pathLower.endsWith(".png")) {
+                        mimeType = "image/png";
+                    } else if (pathLower.endsWith(".webp")) {
+                        mimeType = "image/webp";
+                    }
 
                     String promptText = String.format(
-                            "You are a KYC Expert. VISUALLY ANALYZE THIS ID CARD IMAGE.\\n\" +\n" +
-                                    "                    \"User Claims:\\n\" +\n" +
-                                    "                    \"- Name: '%s'\\n\" +\n" +
-                                    "                    \"- ID Number: '%s'\\n\" +\n" +
-                                    "                    \"- ID Type: '%s'\\n\\n\" +\n" +
-                                    "                    \n" +
-                                    "                    \"Task:\\n\" +\n" +
-                                    "                    \"1. OCR Check: Does the text in the image match the User Claims? (Ignore minor typos).\\n\" +\n" +
-                                    "                    \"2. Fraud Check: Is the font consistent? Does it look photoshopped or fake?\\n\" +\n" +
-                                    "                    \"3. Photo Check: Is there a clear photo on the ID?\\n\" +\n" +
-                                    "                    \"4. Quality Check: Is the image too blurry to read?\\n\\n\" +\n" +
-                                    "\n" +
-                                    "                    \"Output JSON Format:\\n\" +\n" +
-                                    "                    \"{ \\\"status\\\": \\\"AI_CLEAR\\\" (only if >80 confidence), \\\"confidenceScore\\\": (0-100), \" +\n" +
-                                    "                    \"\\\"recommendation\\\": \\\"AUTO_APPROVE\\\" or \\\"MANUAL_REVIEW\\\", \" +\n" +
-                                    "                    \"\\\"riskFlags\\\": [\\\"List\\\", \\\"Of\\\", \\\"Findings\\\"] }",
-                            record.getUser().getFullName(),
-                            record.getGovtIdNumber(),
-                            record.getGovtIdType()
+                            "You are a KYC Expert. VISUALLY ANALYZE THIS ID CARD IMAGE.\n" +
+                                    "User Claims: Name='%s', ID='%s', Type='%s'.\n" +
+                                    "Task: Check for photo mismatch, fake fonts, blurriness.\n" +
+                                    "Output JSON: { \"status\": \"AI_CLEAR\"/\"AI_FLAGGED\", \"confidenceScore\": 0-100, \"recommendation\": \"...\", \"riskFlags\": [...] }",
+                            record.getUser().getFullName(), record.getGovtIdNumber(), record.getGovtIdType()
                     );
 
-                    JsonObject userMessage = new JsonObject()
-                            .put("role", "user")
-                            .put("content", new JsonArray()
-                                    .add(new JsonObject().put("type", "text").put("text", promptText))
-                                    .add(new JsonObject().put("type", "image_url").put("image_url", new JsonObject()
-                                            .put("url", "data:image/jpeg;base64," + base64Image)))
-                            );
-
                     JsonObject payload = new JsonObject()
-                            .put("model", model)
-                            .put("messages", new JsonArray().add(userMessage));
+                            .put("contents", new JsonArray().add(new JsonObject()
+                                    .put("parts", new JsonArray()
+                                            .add(new JsonObject().put("text", promptText))
+                                            .add(new JsonObject()
+                                                    .put("inline_data", new JsonObject()
+                                                            .put("mime_type", "image/jpeg")
+                                                            .put("data", base64Image)
+                                                    )
+                                            )
+                                    )
+                            ));
 
-                    // 3. Send Request (Non-blocking)
-                    return webClient.postAbs("https://openrouter.ai/api/v1/chat/completions")
-                            .putHeader("Authorization", "Bearer " + apiKey)
+                    // ✅ DYNAMIC URL: Uses 'this.model' instead of hardcoding
+                    String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+
+                    return webClient.postAbs(url)
                             .putHeader("Content-Type", "application/json")
                             .rxSendJsonObject(payload)
                             .map(response -> {
                                 if (response.statusCode() != 200) {
-                                    System.err.println("❌ AI API Error: " + response.bodyAsString());
-                                    throw new RuntimeException("AI API Error: " + response.statusMessage());
+                                    // Print detailed error for debugging
+                                    System.err.println("❌ Google API Error: " + response.bodyAsString());
+                                    throw new RuntimeException("Google API Error: " + response.statusMessage());
                                 }
 
                                 JsonObject body = response.bodyAsJsonObject();
-                                String aiContent = body.getJsonArray("choices").getJsonObject(0).getJsonObject("message").getString("content");
 
-                                if (aiContent.contains("```json")) {
-                                    aiContent = aiContent.replace("```json", "").replace("```", "");
+                                // Safe parsing for Google's response structure
+                                try {
+                                    String text = body.getJsonArray("candidates").getJsonObject(0)
+                                            .getJsonObject("content").getJsonArray("parts").getJsonObject(0)
+                                            .getString("text");
+
+                                    if (text.contains("```json")) text = text.replace("```json", "").replace("```", "");
+                                    return new JsonObject(text).mapTo(AiAnalysisResult.class);
+                                } catch (Exception e) {
+                                    throw new RuntimeException("Failed to parse AI response: " + body.encode());
                                 }
-
-                                return new JsonObject(aiContent).mapTo(AiAnalysisResult.class);
                             });
+                })
+                .onErrorReturn(err -> {
+                    System.err.println("⚠️ AI Service Failed: " + err.getMessage());
+                    AiAnalysisResult fallback = new AiAnalysisResult();
+                    fallback.setStatus("AI_FLAGGED");
+                    fallback.setRecommendation("MANUAL_REVIEW");
+                    fallback.setRiskFlags(Collections.singletonList("AI_UNAVAILABLE: " + err.getMessage()));
+                    return fallback;
                 });
     }
 }
