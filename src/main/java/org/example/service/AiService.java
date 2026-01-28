@@ -22,7 +22,7 @@ public class AiService {
         this.vertx = vertx;
         this.webClient = WebClient.create(vertx);
         this.apiKey = apiKey;
-        this.model = model; // ✅ Store it
+        this.model = model;
     }
 
     public Single<AiAnalysisResult> analyzeDocument(KycRecord record) {
@@ -65,7 +65,6 @@ public class AiService {
                                     )
                             ));
 
-                    // ✅ DYNAMIC URL: Uses 'this.model' instead of hardcoding
                     String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
 
                     return webClient.postAbs(url)
@@ -73,14 +72,14 @@ public class AiService {
                             .rxSendJsonObject(payload)
                             .map(response -> {
                                 if (response.statusCode() != 200) {
-                                    // Print detailed error for debugging
+
                                     System.err.println("❌ Google API Error: " + response.bodyAsString());
                                     throw new RuntimeException("Google API Error: " + response.statusMessage());
                                 }
 
                                 JsonObject body = response.bodyAsJsonObject();
 
-                                // Safe parsing for Google's response structure
+
                                 try {
                                     String text = body.getJsonArray("candidates").getJsonObject(0)
                                             .getJsonObject("content").getJsonArray("parts").getJsonObject(0)
