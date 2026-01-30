@@ -1,5 +1,6 @@
 package org.example.service;
 
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.vertx.core.json.JsonObject;
 import org.example.entity.User;
 import org.example.entity.enums.Role;
@@ -30,7 +31,7 @@ public class AuthService {
     }
 
 
-    public String login(String email, String password) {
+    /*public String login(String email, String password) {
         User user = userRepo.findByEmail(email);
 
         if (user == null) throw new RuntimeException("Invalid credentials");
@@ -40,7 +41,7 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
 
         return JwtUtil.generate(user, secret, expiryMs);
-    }
+    }*/
 
 
     public Single<String> loginRx(String email, String password) {
@@ -51,7 +52,7 @@ public class AuthService {
                 throw new RuntimeException("Invalid credentials");
             }
             return JwtUtil.generate(user, secret, expiryMs);
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
 
@@ -91,7 +92,7 @@ public class AuthService {
             }
 
             return response;
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
     public Single<JsonObject> updateProfileRx(Long userId, org.example.dto.UpdateProfileRequest req) {
@@ -123,6 +124,6 @@ public class AuthService {
                 }
             }
             return new JsonObject().put("message", "Profile updated successfully");
-        });
+        }).subscribeOn(Schedulers.io());
     }
 }

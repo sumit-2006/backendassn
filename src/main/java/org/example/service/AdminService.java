@@ -17,6 +17,7 @@ import org.example.repository.StudentProfileRepository;
 import org.example.repository.TeacherProfileRepository;
 import org.example.repository.UserRepository;
 import org.example.utils.PasswordUtil;
+import org.example.utils.ValidationUtil;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -41,7 +42,7 @@ public class AdminService {
     }
 
 
-    public Completable onboardUserRx(OnboardRequest request) {
+    public Completable  onboardUserRx(OnboardRequest request) {
         return Completable.fromAction(() -> {
             if (userRepo.findByEmail(request.getEmail()) != null) {
                 throw new RuntimeException("Email already exists");
@@ -73,7 +74,7 @@ public class AdminService {
                 tp.setExperienceYears(request.getExperienceYears());
                 teacherRepo.save(tp);
             }
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
 
@@ -184,15 +185,16 @@ public class AdminService {
             return new JsonObject()
                     .put("uploadId", upload.getId())
                     .put("message", "Upload started. Track status via /admin/uploads/" + upload.getId() + "/status");
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
 
-    private void processBulkFile(Long uploadId, String filePath) {
+    /*private void processBulkFile(Long uploadId, String filePath) {
         BulkUpload upload = bulkUploadRepo.findById(uploadId);
         List<String> errors = new ArrayList<>();
         int success = 0;
         int failed = 0;
+        int MAX_ERRORS=100;
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -213,11 +215,7 @@ public class AdminService {
                     String roleStr = parts[3].trim().toUpperCase();
                     String password = parts[4].trim();
 
-                    // ✅ FIX: Explicitly check for empty strings
-                    if (name.isEmpty()) throw new RuntimeException("Name is required");
-                    if (email.isEmpty()) throw new RuntimeException("Email is required");
-                    if (mobile.isEmpty()) throw new RuntimeException("Mobile is required");
-                    if (password.isEmpty()) throw new RuntimeException("Password is required");
+                    ValidationUtil.validateBulkRow(name, email, mobile, password, roleStr);
 
 
                     Role role;
@@ -263,16 +261,91 @@ public class AdminService {
         } catch (Exception e) {
             markUploadFailed(uploadId, "File read error: " + e.getMessage());
         }
+    }*/
+    private void processBulkFile(Long uploadId, String filePath) {
+        BulkUpload upload = bulkUploadRepo.findById(uploadId);
+        List<String> errors = new ArrayList<>();
+        int success = 0;
+        int failed = 0;
+        int MAX_ERRORS = 100; // ✅ FIX 3: Cap errors to prevent Memory Overflow
+
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            int rowNum = 0;
+            while ((line = br.readLine()) != null) {
+                rowNum++;
+                if (rowNum == 1 && line.toLowerCase().contains("email")) continue;
+                if (line.trim().isEmpty()) continue;
+
+                try {
+                    processSingleRow(line); // ✅ Call helper method
+                    success++;
+                } catch (Exception e) {
+                    failed++;
+                    if (errors.size() < MAX_ERRORS) {
+                        errors.add("Row " + rowNum + ": " + e.getMessage());
+                    } else if (errors.size() == MAX_ERRORS) {
+                        errors.add("... Error log truncated ...");
+                    }
+                }
+            }
+
+            upload.setSuccessCount(success);
+            upload.setFailureCount(failed);
+            upload.setTotalRecords(success + failed);
+            upload.setErrorReport(errors);
+            upload.setStatus(BulkUploadStatus.COMPLETED);
+            bulkUploadRepo.save(upload);
+
+        } catch (Exception e) {
+            markUploadFailed(uploadId, "File read error: " + e.getMessage());
+        }
     }
 
+    private void processSingleRow(String line) {
+        String[] parts = line.split(",", -1);
+        if (parts.length < 5) throw new RuntimeException("Insufficient columns");
+
+        String name = parts[0].trim();
+        String email = parts[1].trim();
+        String mobile = parts[2].trim();
+        String roleStr = parts[3].trim().toUpperCase();
+        String password = parts[4].trim();
+
+        // 🟢 USE VALIDATION UTIL
+        ValidationUtil.validateBulkRow(name, email, mobile, password, roleStr);
+
+        Role role = Role.valueOf(roleStr);
+
+        if (userRepo.findByEmail(email) != null) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        String p1 = parts.length > 5 ? parts[5].trim() : null;
+        String p2 = parts.length > 6 ? parts[6].trim() : null;
+        String p3 = parts.length > 7 ? parts[7].trim() : null;
+        String p4 = parts.length > 8 ? parts[8].trim() : null;
+
+        Double salary = (p3 != null && !p3.isEmpty() && role == Role.TEACHER) ? Double.parseDouble(p3) : null;
+        Integer expYears = (p4 != null && !p4.isEmpty() && role == Role.TEACHER) ? Integer.parseInt(p4) : null;
+
+        createUserAndProfile(name, email, mobile, role, password,
+                p1, p2, p3, p1, p2, salary, expYears, null);
+    }
     private void markUploadFailed(Long uploadId, String reason) {
-        BulkUpload upload = bulkUploadRepo.findById(uploadId);
-        if (upload != null) {
-            upload.setStatus(BulkUploadStatus.FAILED);
-            List<String> errs = new ArrayList<>();
-            errs.add(reason);
-            upload.setErrorReport(errs);
-            bulkUploadRepo.save(upload);
+        try {
+            BulkUpload upload = bulkUploadRepo.findById(uploadId);
+            if (upload != null) {
+                upload.setStatus(BulkUploadStatus.FAILED);
+                List<String> errs = new ArrayList<>();
+                errs.add(reason);
+                upload.setErrorReport(errs);
+                bulkUploadRepo.save(upload);
+            }
+        }
+        catch (Exception e)
+        {
+            System.err.println("Fatal DB Error during failure marking: " + e.getMessage());
         }
     }
 
@@ -321,7 +394,7 @@ public class AdminService {
             userRepo.save(user);
 
             return new JsonObject().put("message", "User status updated to " + status);
-        });
+        }).subscribeOn(Schedulers.io());
     }
     public BulkUploadRepository getBulkUploadRepo() {
         return bulkUploadRepo;
@@ -340,6 +413,6 @@ public class AdminService {
             userRepo.save(user);
 
             return new JsonObject().put("message", "User deleted successfully");
-        });
+        }).subscribeOn(Schedulers.io());
     }
 }

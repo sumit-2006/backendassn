@@ -6,6 +6,8 @@ import io.vertx.ext.web.RoutingContext;
 import org.example.dto.OnboardRequest;
 import org.example.entity.enums.UserStatus;
 import org.example.service.AdminService;
+import org.example.utils.ValidationUtil;
+
 
 public class AdminHandler {
     private final AdminService adminService;
@@ -20,6 +22,7 @@ public class AdminHandler {
 
             OnboardRequest req = body.mapTo(OnboardRequest.class);
 
+            ValidationUtil.validateOnboardRequest(body);
 
             adminService.onboardUserRx(req)
                     .subscribe(
@@ -32,6 +35,8 @@ public class AdminHandler {
             ctx.response().setStatusCode(400).end("Invalid Request: " + e.getMessage());
         }
     }
+
+
 
     public void listUsers(RoutingContext ctx) {
         try {

@@ -7,6 +7,9 @@ import org.example.dto.LoginRequest;
 import org.example.repository.TokenRepository;
 import org.example.service.AuthService;
 import org.example.utils.JwtUtil;
+import io.vertx.core.Promise; // ✅ Required Import
+import  io.vertx.core.Handler;
+
 
 public class AuthHandler {
 
@@ -43,7 +46,7 @@ public class AuthHandler {
                 err -> ctx.response().setStatusCode(404).end(new JsonObject().put("error", err.getMessage()).encode())
         );
     }
-    public void logout(RoutingContext ctx) {
+    /*public void logout(RoutingContext ctx) {
         try {
             String auth = ctx.request().getHeader("Authorization");
             if (auth == null || !auth.startsWith("Bearer ")) {
@@ -62,7 +65,37 @@ public class AuthHandler {
         } catch (Exception e) {
             ctx.response().setStatusCode(401).end("Invalid token");
         }
+    }*/
+
+    // ... imports
+// Remove: import io.vertx.core.Promise; (No longer needed for this method)
+
+    public void logout(RoutingContext ctx) {
+        String auth = ctx.request().getHeader("Authorization");
+        if (auth == null || !auth.startsWith("Bearer ")) {
+            ctx.response().setStatusCode(400).end("Missing token");
+            return;
+        }
+
+        // ✅ FIX: Use a Callable ( () -> { ... return value; } )
+        ctx.vertx().executeBlocking(() -> {
+                    String token = auth.substring(7);
+
+                    // 1. Verify Token (Blocking CPU work)
+                    Claims claims = JwtUtil.verify(token, secret);
+
+                    // 2. Invalidate in DB (Blocking I/O)
+                    if (claims != null) {
+                        String tokenHash = String.valueOf(token.hashCode());
+                        tokenRepo.invalidate(tokenHash, claims.getExpiration().toInstant());
+                    }
+
+                    return null; // ✅ Must return null (or a value) to satisfy Callable<T>
+                })
+                .onSuccess(v -> ctx.response().setStatusCode(200).end("✅ Logged out"))
+                .onFailure(err -> ctx.response().setStatusCode(401).end("Invalid token: " + err.getMessage()));
     }
+
 
     public void updateProfile(RoutingContext ctx) {
         Long userId = ctx.get("userId");
