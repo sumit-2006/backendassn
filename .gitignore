@@ -39,3 +39,11 @@ build/
 .DS_Store
 
 *.properties
+
+
+# Security - Environment files with secrets
+.env
+.env.local
+.env.production
+.env.staging
+src/main/resources/.env

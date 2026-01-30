@@ -25,6 +25,13 @@ public class AuthHandler {
 
 
     public void login(RoutingContext ctx) {
+        try{
+            JsonObject reqBody=ctx.body().asJsonObject();
+            String email=reqBody.getString("email");
+            String password=reqBody.getString("password");
+
+            org.example.utils.ValidationUtil.validateLogin(email, password);
+
         LoginRequest req = ctx.body().asJsonObject().mapTo(LoginRequest.class);
 
         authService.loginRx(req.email, req.password)
@@ -33,6 +40,11 @@ public class AuthHandler {
                                 .end(new JsonObject().put("accessToken", token).encode()),
                         err -> ctx.response().setStatusCode(401).end(err.getMessage())
                 );
+    } catch (IllegalArgumentException e) {
+        ctx.response().setStatusCode(400).end(new JsonObject().put("error", e.getMessage()).encode());
+    } catch (Exception e) {
+        ctx.response().setStatusCode(400).end("Invalid Login Request");
+    }
     }
 
     public void getProfile(io.vertx.ext.web.RoutingContext ctx) {

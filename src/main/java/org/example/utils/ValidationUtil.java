@@ -7,7 +7,10 @@ public class ValidationUtil {
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
     private static final int MIN_PASSWORD_LENGTH = 6;
-
+    public static void validateLogin(String email, String password) {
+        if (email == null || email.isBlank()) throw new IllegalArgumentException("Email is required");
+        if (password == null || password.isBlank()) throw new IllegalArgumentException("Password is required");
+    }
     public static void validateOnboardRequest(JsonObject body) {
         if (body == null) throw new IllegalArgumentException("Request body is required");
 
